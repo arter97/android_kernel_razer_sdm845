@@ -18,7 +18,7 @@
 #include <asoc/tfa98xx/tfa_container.h>
 #include <asoc/tfa98xx/tfa.h>
 #include <asoc/tfa98xx/tfa98xx_tfafieldnames.h>
-#include <tfa_internal.h>
+#include "tfa_internal.h"
 
 /* defines */
 #define MODULE_BIQUADFILTERBANK 2

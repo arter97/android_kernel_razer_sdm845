@@ -18,7 +18,7 @@
 #include <asoc/tfa98xx/tfa_container.h>
 #include <asoc/tfa98xx/tfa.h>
 #include <asoc/tfa98xx/tfa98xx_tfafieldnames.h>
-#include <tfa_internal.h>
+#include "tfa_internal.h"
 
 /* handle macro for bitfield */
 #define TFA_MK_BF(reg, pos, len) ((reg<<8)|(pos<<4)|(len-1))
