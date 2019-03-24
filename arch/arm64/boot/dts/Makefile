@@ -21,6 +21,10 @@ dts-dirs += xilinx
 dts-dirs += lg
 dts-dirs += zte
 
+ifeq ($(CONFIG_FIH_RC2),y)
+dts-dirs += fih/RC2_common
+endif
+
 subdir-y	:= $(dts-dirs)
 
 dtstree		:= $(srctree)/$(src)

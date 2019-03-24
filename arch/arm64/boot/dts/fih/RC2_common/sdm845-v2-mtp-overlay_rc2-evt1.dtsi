@@ -1,0 +1,49 @@
+/* Pinctrl */
+#include "sdm845-pinctrl_rc2-pre-evt2.dtsi"
+#include "pm845-pinctrl_rc2-evt.dtsi"
+#include "pmi8998-pinctrl_rc2-evt.dtsi"
+#include "pm8005-pinctrl_rc2-evt.dtsi"
+
+#include "sdm845-platform_rc2-pre-evt2.dtsi"
+#include "sdm845-pmic_rc2-evt.dtsi"
+
+/* Battery */
+#include "battery-evt1.dtsi"
+
+/* Wireless Charger - IDT,P9221 */
+#include "wireless-charging-P9221-pre-evt2.dtsi"
+
+/* Touch */
+#include "touch_synaptics_3708.dtsi"
+
+/* Display */
+#include "display.dtsi"
+
+/* Haptics */
+#include "vibrator.dtsi"
+
+/* NFC */
+#include "nfc_nq_nci.dtsi"
+
+/* Audio */
+#include "sdm845-audio_rc2-evb.dtsi"
+
+/* Flash LED */
+#include "flashled-lm3644_rc2-pre-evt.dtsi"
+
+/* Fingerprint */
+#include "fingerprint-fpc1235-evt1.dtsi"
+
+/* Camera */
+#include "sdm845-camera_rc2-pre-evt2.dtsi"
+
+/* Wifi */
+#include "wifi-module-evb.dtsi"
+
+/* LED */
+#include "led-lp5523-rcl-pre-evt2.dtsi"
+
+/* USB RE-DRIVER */
+#include "redriver-tusb544-rcl-pre-evt.dtsi"
+/* Sensor LVS2A power control */
+#include "sensor_power.dtsi"

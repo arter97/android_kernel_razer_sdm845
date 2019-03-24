@@ -1,0 +1,15 @@
+&qupv3_se7_i2c {
+	status = "okay";
+	wl_p9221@61 {
+		compatible = "wl,p9221";
+		reg = <0x61>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <115 0x00>;
+		wl,irq-gpio = <&tlmm 115 0x00>;
+		wl,enable-gpio = <&pmi8998_gpios 2 0x00>;
+		pinctrl-names = "pmx_wlc_intr_active", "pmx_wlc_sleep";
+		pinctrl-0 = <&pmi8998_gpio2_default &sdm845_gpio115_default>;
+		pinctrl-1 = <&pmi8998_gpio2_sleep>;
+	};
+};
+

@@ -78,8 +78,12 @@ static inline u64 get_time_in_sec(u64 counter)
 
 static inline u64 get_time_in_msec(u64 counter)
 {
+	#ifdef CONFIG_FIH_RPMH_MASTER_STATS
+	do_div(counter, (MSM_ARCH_TIMER_FREQ/MSEC_PER_SEC));
+	#else
 	do_div(counter, MSM_ARCH_TIMER_FREQ);
 	counter *= MSEC_PER_SEC;
+	#endif
 
 	return counter;
 }

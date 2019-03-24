@@ -3702,9 +3702,9 @@ static int sde_rotator_remove(struct platform_device *pdev)
 		return 0;
 	}
 
-	sde_rotator_pm_qos_remove(rot_dev->mdata);
 	for (i = MAX_ROT_OPEN_SESSION - 1; i >= 0; i--)
 		kthread_stop(rot_dev->rot_thread[i]);
+	sde_rotator_pm_qos_remove(rot_dev->mdata);
 	sde_rotator_destroy_debugfs(rot_dev->debugfs_root);
 	video_unregister_device(rot_dev->vdev);
 	video_device_release(rot_dev->vdev);

@@ -1,0 +1,47 @@
+&pm8005_gpios {
+	interrupts = <0x4 0xc0 0 IRQ_TYPE_NONE>,
+			<0x4 0xc1 0 IRQ_TYPE_NONE>;
+	interrupt-names = "pm8005_gpio1", "pm8005_gpio2";
+	qcom,gpios-disallowed = <3 4>;
+
+	pm8005_gpio1 { /* PM8005_GPIO_01 / TP2501 */
+		pm8005_gpio1_default: pm8005_gpio1_default {
+			pins = "gpio1";
+			function = "normal";
+			input-enable;
+			bias-pull-down;
+			power-source = <0>;
+		};
+		pm8005_gpio1_sleep: pm8005_gpio1_sleep {
+			pins = "gpio1";
+			function = "normal";
+			input-enable;
+			bias-pull-down;
+			power-source = <0>;
+		};
+	};
+
+	pm8005_gpio2 { /* PM8005_GPIO_02 / TP2502 */
+		pm8005_gpio2_default: pm8005_gpio2_default {
+			pins = "gpio2";
+			function = "normal";
+			input-enable;
+			bias-pull-down;
+			power-source = <0>;
+		};
+		pm8005_gpio2_sleep: pm8005_gpio2_sleep {
+			pins = "gpio2";
+			function = "normal";
+			input-enable;
+			bias-pull-down;
+			power-source = <0>;
+		};
+	};
+
+	/*pm8005_gpio3 { // PM_SLB - disallow config
+	};*/
+
+	/*pm8005_gpio4 { // OPTION_1_PM8005 - disallow config
+	}*/
+};
+

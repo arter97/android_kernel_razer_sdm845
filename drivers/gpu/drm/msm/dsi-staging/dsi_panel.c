@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2018, Razer Inc. All rights reserved.
  * Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -473,10 +474,10 @@ static int dsi_panel_power_off(struct dsi_panel *panel)
 
 	if (gpio_is_valid(panel->reset_config.disp_en_gpio))
 		gpio_set_value(panel->reset_config.disp_en_gpio, 0);
-
+/*
 	if (gpio_is_valid(panel->reset_config.reset_gpio))
 		gpio_set_value(panel->reset_config.reset_gpio, 0);
-
+*/
 	if (gpio_is_valid(panel->reset_config.lcd_mode_sel_gpio))
 		gpio_set_value(panel->reset_config.lcd_mode_sel_gpio, 0);
 
@@ -490,6 +491,11 @@ static int dsi_panel_power_off(struct dsi_panel *panel)
 	if (rc)
 		pr_err("[%s] failed to enable vregs, rc=%d\n", panel->name, rc);
 
+/* //Move reset process to dsi_pwr_enable_regulator
+	if (gpio_is_valid(panel->reset_config.reset_gpio)){
+	gpio_set_value(panel->reset_config.reset_gpio, 0);
+	}
+*/
 	return rc;
 }
 static int dsi_panel_tx_cmd_set(struct dsi_panel *panel,
@@ -1130,44 +1136,24 @@ error:
 	return rc;
 }
 
-static int dsi_panel_parse_dyn_clk_caps(struct dsi_dyn_clk_caps *dyn_clk_caps,
-				     struct device_node *of_node,
-				     const char *name)
+static int dsi_panel_parse_qsync_caps(struct dsi_panel *panel,
+				     struct device_node *of_node)
 {
 	int rc = 0;
-	bool supported = false;
+	u32 val = 0;
 
-	supported = of_property_read_bool(of_node, "qcom,dsi-dyn-clk-enable");
-
-	if (!supported) {
-		dyn_clk_caps->dyn_clk_support = false;
-		return rc;
-	}
-
-	of_find_property(of_node, "qcom,dsi-dyn-clk-list",
-			      &dyn_clk_caps->bit_clk_list_len);
-	dyn_clk_caps->bit_clk_list_len /= sizeof(u32);
-	if (dyn_clk_caps->bit_clk_list_len < 1) {
-		pr_err("[%s] failed to get supported bit clk list\n", name);
-		return -EINVAL;
-	}
-
-	dyn_clk_caps->bit_clk_list = kcalloc(dyn_clk_caps->bit_clk_list_len,
-					     sizeof(u32), GFP_KERNEL);
-	if (!dyn_clk_caps->bit_clk_list)
-		return -ENOMEM;
-
-	rc = of_property_read_u32_array(of_node, "qcom,dsi-dyn-clk-list",
-				   dyn_clk_caps->bit_clk_list,
-				   dyn_clk_caps->bit_clk_list_len);
+	rc = of_property_read_u32(of_node,
+				  "qcom,mdss-dsi-qsync-min-refresh-rate",
+				  &val);
 	if (rc) {
-		pr_err("[%s] failed to parse supported bit clk list\n", name);
-		return -EINVAL;
+		pr_err("[%s] qsync min fps not defined rc:%d\n",
+			panel->name, rc);
+		panel->qsync_min_fps = 0;
+	} else {
+		panel->qsync_min_fps = val;
 	}
 
-	dyn_clk_caps->dyn_clk_support = true;
-
-	return 0;
+	return rc;
 }
 
 static int dsi_panel_parse_dfps_caps(struct dsi_dfps_capabilities *dfps_caps,
@@ -1177,7 +1163,9 @@ static int dsi_panel_parse_dfps_caps(struct dsi_dfps_capabilities *dfps_caps,
 	int rc = 0;
 	bool supported = false;
 	const char *type;
-	u32 val = 0, i;
+	u32 val = 0;
+	int num_rates = 0;
+	int i = 0;
 
 	supported = of_property_read_bool(of_node,
 					"qcom,mdss-dsi-pan-enable-dynamic-fps");
@@ -1185,68 +1173,112 @@ static int dsi_panel_parse_dfps_caps(struct dsi_dfps_capabilities *dfps_caps,
 	if (!supported) {
 		pr_debug("[%s] DFPS is not supported\n", name);
 		dfps_caps->dfps_support = false;
-		return rc;
-	}
-
-	type = of_get_property(of_node,
-			       "qcom,mdss-dsi-pan-fps-update",
-			       NULL);
-	if (!type) {
-		pr_err("[%s] dfps type not defined\n", name);
-		rc = -EINVAL;
-		goto error;
-	} else if (!strcmp(type, "dfps_suspend_resume_mode")) {
-		dfps_caps->type = DSI_DFPS_SUSPEND_RESUME;
-	} else if (!strcmp(type, "dfps_immediate_clk_mode")) {
-		dfps_caps->type = DSI_DFPS_IMMEDIATE_CLK;
-	} else if (!strcmp(type, "dfps_immediate_porch_mode_hfp")) {
-		dfps_caps->type = DSI_DFPS_IMMEDIATE_HFP;
-	} else if (!strcmp(type, "dfps_immediate_porch_mode_vfp")) {
-		dfps_caps->type = DSI_DFPS_IMMEDIATE_VFP;
 	} else {
-		pr_err("[%s] dfps type is not recognized\n", name);
-		rc = -EINVAL;
-		goto error;
+
+		type = of_get_property(of_node,
+				       "qcom,mdss-dsi-pan-fps-update",
+				       NULL);
+		if (!type) {
+			pr_err("[%s] dfps type not defined\n", name);
+			rc = -EINVAL;
+			goto error;
+		} else if (!strcmp(type, "dfps_suspend_resume_mode")) {
+			dfps_caps->type = DSI_DFPS_SUSPEND_RESUME;
+		} else if (!strcmp(type, "dfps_immediate_clk_mode")) {
+			dfps_caps->type = DSI_DFPS_IMMEDIATE_CLK;
+		} else if (!strcmp(type, "dfps_immediate_porch_mode_hfp")) {
+			dfps_caps->type = DSI_DFPS_IMMEDIATE_HFP;
+		} else if (!strcmp(type, "dfps_immediate_porch_mode_vfp")) {
+			dfps_caps->type = DSI_DFPS_IMMEDIATE_VFP;
+		} else {
+			pr_err("[%s] dfps type is not recognized\n", name);
+			rc = -EINVAL;
+			goto error;
+		}
+
+		rc = of_property_read_u32(of_node,
+					  "qcom,mdss-dsi-min-refresh-rate",
+					  &val);
+		if (rc) {
+			pr_err("[%s] Min refresh rate is not defined\n", name);
+			rc = -EINVAL;
+			goto error;
+		}
+		dfps_caps->min_refresh_rate = val;
+
+		rc = of_property_read_u32(of_node,
+					  "qcom,mdss-dsi-max-refresh-rate",
+					  &val);
+		if (rc) {
+			pr_debug("[%s] Using default refresh rate\n", name);
+			rc = of_property_read_u32(of_node,
+						"qcom,mdss-dsi-panel-framerate",
+						&val);
+			if (rc) {
+				pr_err("[%s] max refresh rate is not defined\n",
+				       name);
+				rc = -EINVAL;
+				goto error;
+			}
+		}
+		dfps_caps->max_refresh_rate = val;
+
+		if (dfps_caps->min_refresh_rate > dfps_caps->max_refresh_rate) {
+			pr_err("[%s] min rate > max rate\n", name);
+			rc = -EINVAL;
+			goto error;
+		}
+
+		num_rates = of_property_count_u32_elems(of_node,
+			"razer,mdss-dsi-refresh-rates");
+		if (num_rates > 0) {
+			dfps_caps->rates =
+				kzalloc(sizeof(dfps_caps->rates[0]) *
+					num_rates, GFP_KERNEL);
+
+			if (!dfps_caps->rates) {
+				pr_err("[%s] unable to allocate memory for "
+					"refresh rates\n", name);
+				rc = -ENOMEM;
+				goto error;
+			}
+
+			rc = of_property_read_u32_array(of_node,
+				"razer,mdss-dsi-refresh-rates",
+				dfps_caps->rates,
+				num_rates);
+			if (rc) {
+				pr_err("[%s] unable to read refresh rates\n", name);
+				kfree(dfps_caps->rates);
+				dfps_caps->rates = NULL;
+				rc = -EINVAL;
+				goto error;
+			}
+
+			for (i = 0; i < num_rates; i++) {
+				if (dfps_caps->rates[i] < dfps_caps->min_refresh_rate ||
+				    dfps_caps->rates[i] > dfps_caps->max_refresh_rate) {
+					pr_err("[%s] refresh rate %d is out of bounds\n",
+						name, dfps_caps->rates[i]);
+					kfree(dfps_caps->rates);
+					dfps_caps->rates = NULL;
+					rc = -EINVAL;
+					goto error;
+				}
+			}
+
+			dfps_caps->num_rates = num_rates;
+		}
+
+		pr_info("[%s] DFPS is supported %d-%d, mode %d refresh rates: %zu\n",
+				name,
+				dfps_caps->min_refresh_rate,
+				dfps_caps->max_refresh_rate,
+				dfps_caps->type,
+				dfps_caps->num_rates);
+		dfps_caps->dfps_support = true;
 	}
 
-	of_find_property(of_node, "qcom,dsi-supported-dfps-list",
-			 &dfps_caps->dfps_list_len);
-	dfps_caps->dfps_list_len /= sizeof(u32);
-	if (dfps_caps->dfps_list_len < 1) {
-		pr_err("[%s] dfps refresh list not present\n", name);
-		rc = -EINVAL;
-		goto error;
-	}
-
-	dfps_caps->dfps_list = kcalloc(dfps_caps->dfps_list_len, sizeof(u32),
-				       GFP_KERNEL);
-	if (!dfps_caps->dfps_list) {
-		rc = -ENOMEM;
-		goto error;
-	}
-
-	rc = of_property_read_u32_array(of_node, "qcom,dsi-supported-dfps-list",
-					dfps_caps->dfps_list,
-					dfps_caps->dfps_list_len);
-	if (rc) {
-		pr_err("[%s] dfps refresh rate list parse failed\n", name);
-		rc = -EINVAL;
-		goto error;
-	}
-
-	dfps_caps->dfps_support = true;
-
-	/* calculate max and min fps */
-	of_property_read_u32(of_node, "qcom,mdss-dsi-panel-framerate", &val);
-	dfps_caps->max_refresh_rate = val;
-	dfps_caps->min_refresh_rate = val;
-
-	for (i = 0; i < dfps_caps->dfps_list_len; i++) {
-		if (dfps_caps->dfps_list[i] < dfps_caps->min_refresh_rate)
-			dfps_caps->min_refresh_rate = dfps_caps->dfps_list[i];
-		else if (dfps_caps->dfps_list[i] > dfps_caps->max_refresh_rate)
-			dfps_caps->max_refresh_rate = dfps_caps->dfps_list[i];
-	}
 error:
 	return rc;
 }
@@ -1511,6 +1543,10 @@ const char *cmd_set_prop_map[DSI_CMD_SET_MAX] = {
 	"ROI not parsed from DTSI, generated dynamically",
 	"qcom,mdss-dsi-timing-switch-command",
 	"qcom,mdss-dsi-post-mode-switch-on-command",
+	"razer,refresh-rate-config-command",
+	"qcom,mdss-dsi-qsync-on-commands",
+	"qcom,mdss-dsi-qsync-off-commands",
+	"razer,input-boost-commands",
 };
 
 const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
@@ -1535,6 +1571,10 @@ const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
 	"ROI not parsed from DTSI, generated dynamically",
 	"qcom,mdss-dsi-timing-switch-command-state",
 	"qcom,mdss-dsi-post-mode-switch-on-command-state",
+	"razer,refresh-rate-config-command-state",
+	"qcom,mdss-dsi-qsync-on-commands-state",
+	"qcom,mdss-dsi-qsync-off-commands-state",
+	"razer,input-boost-commands-state",
 };
 
 static int dsi_panel_get_cmd_pkt_count(const char *data, u32 length, u32 *cnt)
@@ -1822,6 +1862,20 @@ static int dsi_panel_parse_misc_features(struct dsi_panel *panel,
 
 	panel->lp11_init = of_property_read_bool(of_node,
 			"qcom,mdss-dsi-lp11-init");
+
+	panel->ddic_scaling_en = of_property_read_bool(of_node,
+					"razer,mdss-dsi-pan-enable-ddic-scaling");
+
+	panel->disable_sending_pps = of_property_read_bool(of_node,
+			"razer,mdss-dsi-disable-sending-pps");
+
+	of_property_read_u32(of_node,
+			"razer,mdss-dsi-pre-switch-vfp", &panel->pre_switch_vfp);
+
+	of_property_read_u32(of_node,
+			"razer,mdss-dsi-num-idle-frames", &panel->num_idle_frames);
+	panel->cur_num_idle_frames = U32_MAX;
+
 	return 0;
 }
 
@@ -2301,9 +2355,12 @@ static int dsi_panel_parse_dsc_params(struct dsi_display_mode *mode,
 	priv_info = mode->priv_info;
 
 	priv_info->dsc_enabled = false;
+	mode->timing.dsc_enabled = false;
 	compression = of_get_property(of_node, "qcom,compression-mode", NULL);
-	if (compression && !strcmp(compression, "dsc"))
+	if (compression && !strcmp(compression, "dsc")) {
 		priv_info->dsc_enabled = true;
+		mode->timing.dsc_enabled = true;
+	}
 
 	if (!priv_info->dsc_enabled) {
 		pr_debug("dsc compression is not enabled for the mode");
@@ -2397,6 +2454,8 @@ static int dsi_panel_parse_dsc_params(struct dsi_display_mode *mode,
 
 	dsi_dsc_populate_static_param(&priv_info->dsc);
 	dsi_dsc_pclk_param_calc(&priv_info->dsc, intf_width);
+
+	mode->timing.dsc = &(priv_info->dsc);
 
 error:
 	return rc;
@@ -2945,19 +3004,13 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 			pr_err("failed to parse dfps configuration, rc=%d\n",
 				rc);
 
-		if (panel->panel_mode == DSI_OP_VIDEO_MODE) {
-			rc = dsi_panel_parse_dyn_clk_caps(&panel->dyn_clk_caps,
-				of_node, panel->name);
-			if (rc)
-				pr_err("failed to parse dynamic clk config, rc=%d\n",
-				       rc);
-		}
+		rc = dsi_panel_parse_qsync_caps(panel, of_node);
+		if (rc)
+			pr_err("failed to parse qsync features, rc=%d\n", rc);
 
-		rc = dsi_panel_parse_phy_props(&panel->phy_props,
-			of_node, panel->name);
+		rc = dsi_panel_parse_phy_props(&panel->phy_props, of_node, panel->name);
 		if (rc) {
-			pr_err("failed to parse panel physical dimension, rc=%d\n",
-				rc);
+			pr_err("failed to parse panel physical dimension, rc=%d\n", rc);
 			goto error;
 		}
 
@@ -3352,7 +3405,7 @@ int dsi_panel_get_host_cfg_for_mode(struct dsi_panel *panel,
 	if (mode->priv_info) {
 		config->video_timing.dsc_enabled = mode->priv_info->dsc_enabled;
 		config->video_timing.dsc = &mode->priv_info->dsc;
-		config->bit_clk_rate_hz = mode->timing.clk_rate_hz;
+		config->bit_clk_rate_hz = mode->priv_info->clk_rate_hz;
 	}
 	config->esc_clk_rate_hz = 19200000;
 	mutex_unlock(&panel->panel_lock);
@@ -3603,6 +3656,84 @@ exit:
 	return rc;
 }
 
+int dsi_panel_send_qsync_on_dcs(struct dsi_panel *panel)
+{
+	int rc = 0;
+	struct dsi_cmd_desc *cmds;
+	struct dsi_display_mode *mode;
+	u32 slow_time_ns;
+	u32 default_time_ns;
+	u32 extra_time_ns;
+	u32 total_extra_lines;
+	u32 default_line_time_ns;
+	u8 *payload;
+
+	if (!panel) {
+		pr_err("invalid params\n");
+		return -EINVAL;
+	}
+
+	mutex_lock(&panel->panel_lock);
+
+	if (panel->panel_mode != DSI_OP_CMD_MODE) {
+		pr_err("[%s] qsync only supported in command mode\n",
+			panel->name);
+		rc = -ENOTSUPP;
+		goto error;
+	}
+
+	mode = panel->cur_mode;
+	cmds = mode->priv_info->cmd_sets[DSI_CMD_SET_QSYNC_ON].cmds;
+
+	// Calculate the QSYNC timeout
+	slow_time_ns = (1 * 1000000000) / panel->qsync_min_fps;
+	default_time_ns = (1 * 1000000000) / mode->timing.refresh_rate;
+	extra_time_ns = slow_time_ns - default_time_ns;
+	default_line_time_ns =
+		(1 * 1000000000) / (mode->timing.refresh_rate * mode->timing.v_active);
+
+	total_extra_lines = extra_time_ns / default_line_time_ns;
+
+	payload    = (u8 *) cmds[4].msg.tx_buf;
+	payload[1] = (total_extra_lines >> 8) & 0xff;
+	payload    = (u8 *) cmds[5].msg.tx_buf;
+	payload[1] = total_extra_lines  & 0xff;
+
+	pr_debug("qsync on\n");
+	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_QSYNC_ON);
+	if (rc)
+		pr_err("[%s] failed to send DSI_CMD_SET_QSYNC_ON cmds rc=%d\n",
+		       panel->name, rc);
+
+	panel->qsync_en = true;
+error:
+	mutex_unlock(&panel->panel_lock);
+	return rc;
+}
+
+int dsi_panel_send_qsync_off_dcs(struct dsi_panel *panel)
+{
+	int rc = 0;
+
+	if (!panel) {
+		pr_err("invalid params\n");
+		return -EINVAL;
+	}
+
+	mutex_lock(&panel->panel_lock);
+
+	pr_debug("qsync off\n");
+	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_QSYNC_OFF);
+	if (rc)
+		pr_err("[%s] failed to send DSI_CMD_SET_QSYNC_OFF cmds rc=%d\n",
+		       panel->name, rc);
+
+	panel->qsync_en = false;
+
+	mutex_unlock(&panel->panel_lock);
+	return rc;
+}
+
 int dsi_panel_send_roi_dcs(struct dsi_panel *panel, int ctrl_idx,
 		struct dsi_rect *roi)
 {
@@ -3664,6 +3795,11 @@ int dsi_panel_switch(struct dsi_panel *panel)
 		       panel->name, rc);
 
 	mutex_unlock(&panel->panel_lock);
+
+	// Resend the qsync commands if the timing changes
+	if (!rc && panel->qsync_en) {
+		rc = dsi_panel_send_qsync_on_dcs(panel);
+	}
 	return rc;
 }
 
@@ -3841,6 +3977,133 @@ int dsi_panel_post_unprepare(struct dsi_panel *panel)
 		       panel->name, rc);
 		goto error;
 	}
+error:
+	mutex_unlock(&panel->panel_lock);
+	return rc;
+}
+
+int dsi_panel_set_dfps_vfp_update(struct dsi_panel *panel, u32 force_vfp)
+{
+	int count, rc = 0;
+	struct dsi_cmd_desc *cmds;
+	u32 vfp;
+	u8 *payload;
+	struct dsi_display_mode *mode;
+
+	if (!panel || !panel->cur_mode) {
+		pr_err("Invalid params\n");
+		return -EINVAL;
+	}
+
+	mutex_lock(&panel->panel_lock);
+
+	if (panel->panel_mode != DSI_OP_CMD_MODE) {
+		pr_err("[%s] setting vfp update only supported in command mode\n",
+			panel->name);
+		rc = -ENOTSUPP;
+		goto error;
+	}
+
+	mode = panel->cur_mode;
+	count = mode->priv_info->cmd_sets[DSI_CMD_SET_VFP_UPDATE].count;
+	if (count == 0) {
+		pr_debug("[%s] No commands to be sent for VFP_UPDATE\n",
+			 panel->name);
+		goto error;
+	}
+
+	vfp = force_vfp ? force_vfp : mode->timing.v_front_porch;
+	pr_debug("[%s] setting panel vfp: %u\n", panel->name, vfp);
+
+	cmds = mode->priv_info->cmd_sets[DSI_CMD_SET_VFP_UPDATE].cmds;
+	payload = (u8 *)cmds[2].msg.tx_buf;
+	payload[1] = (vfp >> 8) & 0xff;
+	payload = (u8 *)cmds[3].msg.tx_buf;
+	payload[1] = vfp & 0xff;
+
+	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_VFP_UPDATE);
+	if (rc)
+		pr_err("[%s] failed to send DSI_CMD_SET_VFP_UPDATE cmds, rc=%d\n",
+		       panel->name, rc);
+
+
+error:
+	mutex_unlock(&panel->panel_lock);
+
+	// Resend the qsync commands if the FPS changes
+	if (!rc && panel->qsync_en) {
+		rc = dsi_panel_send_qsync_on_dcs(panel);
+	}
+
+	return rc;
+}
+
+int dsi_panel_set_input_boost(struct dsi_panel *panel, bool enable_boost)
+{
+	int count, rc = 0;
+	struct dsi_cmd_desc *cmds;
+	struct dsi_display_mode *mode;
+	u8 *payload;
+	u32 req_idle_frames;
+
+	if (!panel || !panel->cur_mode) {
+		pr_err("Invalid params\n");
+		return -EINVAL;
+	}
+
+	mutex_lock(&panel->panel_lock);
+
+	if (panel->panel_mode != DSI_OP_CMD_MODE) {
+		pr_err("[%s] setting input boost only supported in command mode\n",
+			panel->name);
+		rc = -ENOTSUPP;
+		goto error;
+	}
+
+	if (!panel->panel_initialized) {
+		pr_err("[%s] cannot set input boost when panel is off\n",
+			panel->name);
+		rc = -EFAULT;
+		goto error;
+	}
+
+	mode = panel->cur_mode;
+	count = mode->priv_info->cmd_sets[DSI_CMD_SET_INPUT_BOOST].count;
+	if (count == 0) {
+		pr_debug("[%s] No commands to be sent for INPUT_BOOST\n",
+			 panel->name);
+		goto error;
+	}
+
+	if (panel->qsync_en) {
+		rc = 0;
+		goto error;
+	}
+
+	req_idle_frames = enable_boost ? 0x00 : panel->num_idle_frames;
+	if (panel->cur_num_idle_frames == req_idle_frames) {
+		pr_debug("[%s] idle frames already set to %u\n", panel->name,
+				req_idle_frames);
+		goto error;
+	}
+
+	cmds = mode->priv_info->cmd_sets[DSI_CMD_SET_INPUT_BOOST].cmds;
+	payload = (u8 *) cmds[2].msg.tx_buf;
+	payload[1] = (u8) (req_idle_frames & 0xff);
+
+	pr_debug("[%s] setting panel input boost (en=%d): framedet=%hhu\n",
+			 panel->name, enable_boost ? 1 : 0, payload[1]);
+
+	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_INPUT_BOOST);
+	if (rc) {
+		pr_err("[%s] failed to send DSI_CMD_SET_INPUT_BOOST cmds, rc=%d\n",
+		       panel->name, rc);
+		goto error;
+	}
+
+	// Update the current value for number of idle frames
+	panel->cur_num_idle_frames = req_idle_frames;
+
 error:
 	mutex_unlock(&panel->panel_lock);
 	return rc;

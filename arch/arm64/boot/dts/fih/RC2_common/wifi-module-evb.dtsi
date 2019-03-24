@@ -1,0 +1,4 @@
+/* Disable QCT refernce design of Wifi Giga module. */
+&wil6210 {
+	status = "disabled";
+};

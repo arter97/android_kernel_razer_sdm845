@@ -1,0 +1,32 @@
+ts3a5018 switch provides a way to control which path to use.
+
+Required properties:
+- compatible	: Should be "ti,ts3a5018"
+- vin-supply	: Power-supply handle node
+- gpio-en	: Gpio number for "EN" pin
+- en-fix-value	: If not set "gpio-en", then must set en-pin fixed value by design.
+		  If gpio-en exists, this would be ignored.
+- gpio-in	: Gpio number for "IN" pin
+- in-fix-value	: If not set "gpio-in", then must set in-pin fixed value by design.
+		  If gpio-in exists, this would be ignored.
+
+Optional properties:
+- pinctrl-names	: Should be "default"
+- pinctrl-0	: Pinctrl node with default initial setting
+- mode-labels	: Three strings array to instead of default label strings
+		  (Default label strings: "NONE", "CLOSE", "OPEN")
+- default-mode	: Integer value for mode(0: all-path off, 1: NC path, 2: NO path)
+
+Example:
+	asic-spi-sw {
+		compatible = "ti,ts3a5018";
+		status = "okay";
+
+		vin-supply = <&pm8998_s4>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&sdm845_gpio14_default>;
+		en-fix-value = <0>;
+		gpio-in = <&tlmm 14 0>;
+		mode-labels = "NONE", "ASIC", "QCOM";
+		default-mode = <1>; /* NC mode */
+	};

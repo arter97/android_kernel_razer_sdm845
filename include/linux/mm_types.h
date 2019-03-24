@@ -410,7 +410,7 @@ struct mm_struct {
 #ifdef CONFIG_SPECULATIVE_PAGE_FAULT
 	rwlock_t mm_rb_lock;
 #endif
-	u32 vmacache_seqnum;                   /* per-thread vmacache */
+	u64 vmacache_seqnum;                   /* per-thread vmacache */
 #ifdef CONFIG_MMU
 	unsigned long (*get_unmapped_area) (struct file *filp,
 				unsigned long addr, unsigned long len,
@@ -448,6 +448,8 @@ struct mm_struct {
 	unsigned long exec_vm;		/* VM_EXEC & ~VM_WRITE & ~VM_STACK */
 	unsigned long stack_vm;		/* VM_STACK */
 	unsigned long def_flags;
+
+	spinlock_t arg_lock; /* protect the below fields */
 	unsigned long start_code, end_code, start_data, end_data;
 	unsigned long start_brk, brk, start_stack;
 	unsigned long arg_start, arg_end, env_start, env_end;

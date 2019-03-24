@@ -20,6 +20,10 @@
 #include <linux/irq.h>
 #include <linux/irqdesc.h>
 
+#ifdef CONFIG_FIH_DUMP_WAKELOCK
+#include <linux/msm_drm_notify.h>
+#endif
+
 #include "power.h"
 
 /*
@@ -56,6 +60,14 @@ static void split_counters(unsigned int *cnt, unsigned int *inpr)
 static unsigned int saved_count;
 
 static DEFINE_SPINLOCK(events_lock);
+
+#ifdef CONFIG_FIH_DUMP_WAKELOCK
+#define POLLING_DUMP_WAKELOCK_SECS      (60)
+#define POLLING_DUMP_WAKELOCK_1ST_SECS  (1)
+
+static void dump_wakelocks(unsigned long data);
+static DEFINE_TIMER(dump_wakelock_timer, dump_wakelocks, 0, 0);
+#endif /* CONFIG_FIH_DUMP_WAKELOCK */
 
 static void pm_wakeup_timer_fn(unsigned long data);
 
@@ -922,14 +934,116 @@ void pm_system_irq_wakeup(unsigned int irq_number)
 			else if (desc->action && desc->action->name)
 				name = desc->action->name;
 
+			#ifdef CONFIG_FIH_SUSPEND_RESUME_LOG
+			pr_warn("[PM] %s: %d triggered %s\n", __func__,
+					irq_number, name);
+			#else
 			pr_warn("%s: %d triggered %s\n", __func__,
 					irq_number, name);
+			#endif
 
 		}
 		pm_wakeup_irq = irq_number;
 		pm_system_wakeup();
 	}
 }
+#ifdef CONFIG_FIH_DUMP_WAKELOCK
+static int print_active_wakeup_source_stats(struct wakeup_source *ws)
+{
+	unsigned long flags;
+	ktime_t active_time;
+	int ret = 0;
+
+	spin_lock_irqsave(&ws->lock, flags);
+
+	if (ws->active) {
+		ktime_t now = ktime_get();
+
+		active_time = ktime_sub(now, ws->last_time);
+
+		pr_info("[PM]active wake lock %s, active_time=%lld ms\n",
+			ws->name, ktime_to_ms(active_time));
+	}
+
+	spin_unlock_irqrestore(&ws->lock, flags);
+
+	return ret;
+}
+
+ /* Caller must acquire the list_lock spinlock */
+static void print_active_locks(void)
+{
+	struct wakeup_source *ws;
+	int srcuidx;
+
+	srcuidx = srcu_read_lock(&wakeup_srcu);
+	list_for_each_entry_rcu(ws, &wakeup_sources, entry)
+	print_active_wakeup_source_stats(ws);
+	srcu_read_unlock(&wakeup_srcu, srcuidx);
+}
+
+static void dump_wakelocks(unsigned long data)
+{
+	pr_info("[PM]--- dump_wakelocks ---\n");
+
+	print_active_locks();
+
+	mod_timer(&dump_wakelock_timer, jiffies + POLLING_DUMP_WAKELOCK_SECS*HZ);
+}
+
+static int fb_notifier_callback(struct notifier_block *self, unsigned long event, void *data)
+{
+	struct msm_drm_notifier *evdata = data;
+	int *blank = NULL;
+	static bool add = false;
+
+	if (!evdata || !evdata->data) {
+		pr_err("pms !data\n");
+		return 0;
+	}
+
+	if (evdata->id != MSM_DRM_PRIMARY_DISPLAY) {
+		pr_err("pms not primary display.(%d)\n", evdata->id);
+		return 0;
+	}
+
+	blank = evdata->data;
+	if (*blank != MSM_DRM_BLANK_POWERDOWN && *blank != MSM_DRM_BLANK_UNBLANK) {
+		pr_err("pms drm *blank = %d\n", *blank);
+		return 0;
+	}
+
+	if (*blank == MSM_DRM_BLANK_POWERDOWN) {
+		if (!add) {
+			pr_info("[PM] add dump_wakelock_timer\n");
+			mod_timer(&dump_wakelock_timer, jiffies + POLLING_DUMP_WAKELOCK_1ST_SECS*HZ);
+			add = true;
+		}
+	} else if (*blank == MSM_DRM_BLANK_UNBLANK) {
+		if (del_timer(&dump_wakelock_timer)) {
+			pr_info("[PM] del dump_wakelock_timer\n");
+			add = false;
+		}
+	}
+
+	return 0;
+}
+
+static struct notifier_block pms_drm_notif;
+static void setup_wakelock_dump(void)
+{
+	int retval = 0;
+
+	memset(&pms_drm_notif, 0, sizeof(pms_drm_notif));
+	pms_drm_notif.notifier_call = fb_notifier_callback;
+
+	retval = msm_drm_register_client(&pms_drm_notif);
+	if (retval)
+		pr_err("%s: Unable to register pms_drm_notif: %d\n", __func__, retval);
+	else
+		pr_info("%s: Success to register pms_drm_notif: %d\n", __func__, retval);
+}
+#endif /* CONFIG_FIH_DUMP_WAKELOCK */
 
 /**
  * pm_get_wakeup_count - Read the number of registered wakeup events.
@@ -1112,6 +1226,9 @@ static int __init wakeup_sources_debugfs_init(void)
 {
 	wakeup_sources_stats_dentry = debugfs_create_file("wakeup_sources",
 			S_IRUGO, NULL, NULL, &wakeup_sources_stats_fops);
+#ifdef CONFIG_FIH_DUMP_WAKELOCK
+	setup_wakelock_dump();
+#endif
 	return 0;
 }
 

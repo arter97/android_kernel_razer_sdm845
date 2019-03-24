@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2018, Razer Inc. All rights reserved.
  * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
  * Copyright (C) 2013 Red Hat
  * Author: Rob Clark <robdclark@gmail.com>
@@ -1574,7 +1575,9 @@ static int _sde_encoder_update_rsc_client(
 	struct drm_crtc *primary_crtc;
 	int pipe = -1;
 	int rc = 0;
-	int wait_refcount;
+	int wait_refcount, i;
+	struct sde_encoder_phys *phys;
+	u32 qsync_mode = 0;
 
 	if (!drm_enc || !drm_enc->dev) {
 		SDE_ERROR("invalid encoder arguments\n");
@@ -1602,6 +1605,16 @@ static int _sde_encoder_update_rsc_client(
 		return 0;
 	}
 
+	for (i = 0; i < sde_enc->num_phys_encs; i++) {
+		phys = sde_enc->phys_encs[i];
+
+		if (phys) {
+			qsync_mode = sde_connector_get_property(
+			  phys->connector->state, CONNECTOR_PROP_QSYNC_MODE);
+			break;
+		}
+	}
+
 	/**
 	 * only primary command mode panel can request CMD state.
 	 * all other panels/displays can request for VID state including
@@ -1613,18 +1626,23 @@ static int _sde_encoder_update_rsc_client(
 	else
 		rsc_state = enable ?
 			(((disp_info->capabilities & MSM_DISPLAY_CAP_CMD_MODE)
-			  && disp_info->is_primary) ? SDE_RSC_CMD_STATE :
+			  && disp_info->is_primary && !qsync_mode) ? SDE_RSC_CMD_STATE :
 			 SDE_RSC_VID_STATE) : SDE_RSC_IDLE_STATE;
+
+	pr_debug("enable=%d rsc_state=%d qsync_mode=%d, is_primary=%d\n",
+			 enable, rsc_state, qsync_mode, disp_info->is_primary);
+
+	SDE_EVT32(rsc_state, qsync_mode);
 
 	prefill_lines = config ? mode_info.prefill_lines +
 		config->inline_rotate_prefill : mode_info.prefill_lines;
 
 	/* compare specific items and reconfigure the rsc */
 	if ((rsc_config->fps != mode_info.frame_rate) ||
-	    (rsc_config->vtotal != mode_info.vtotal) ||
-	    (rsc_config->prefill_lines != prefill_lines) ||
-	    (rsc_config->jitter_numer != mode_info.jitter_numer) ||
-	    (rsc_config->jitter_denom != mode_info.jitter_denom)) {
+		(rsc_config->vtotal != mode_info.vtotal) ||
+		(rsc_config->prefill_lines != prefill_lines) ||
+		(rsc_config->jitter_numer != mode_info.jitter_numer) ||
+		(rsc_config->jitter_denom != mode_info.jitter_denom)) {
 		rsc_config->fps = mode_info.frame_rate;
 		rsc_config->vtotal = mode_info.vtotal;
 		rsc_config->prefill_lines = prefill_lines;
@@ -1889,6 +1907,40 @@ static int _sde_encoder_resource_control_helper(struct drm_encoder *drm_enc,
 	return 0;
 }
 
+static void _sde_panel_input_boost(struct drm_encoder *drm_enc, bool enable_boost)
+{
+	struct msm_drm_private *priv = NULL;
+	struct drm_connector *conn = NULL, *conn_iter;
+	struct list_head *connector_list;
+	struct sde_kms *sde_kms;
+	struct sde_connector *sde_conn = NULL;
+	struct sde_encoder_virt *sde_enc;
+
+	sde_enc = to_sde_encoder_virt(drm_enc);
+	priv = drm_enc->dev->dev_private;
+	sde_kms = to_sde_kms(priv->kms);
+	connector_list = &sde_kms->dev->mode_config.connector_list;
+
+	list_for_each_entry(conn_iter, connector_list, head)
+		if (conn_iter->encoder == drm_enc)
+			conn = conn_iter;
+
+	if (!conn) {
+		SDE_ERROR_ENC(sde_enc, "failed to find attached connector\n");
+		return;
+	} else if (!conn->state) {
+		SDE_ERROR_ENC(sde_enc, "invalid connector state\n");
+		return;
+	}
+
+	sde_conn = to_sde_connector(conn);
+	if (sde_conn && sde_conn->ops.display_input_boost) {
+		int ret = sde_conn->ops.display_input_boost(sde_conn->display, enable_boost);
+		if (ret)
+			SDE_ERROR_ENC(sde_enc, "failed to set the panel input boost\n");
+	}
+}
+
 static void sde_encoder_input_event_handler(struct input_handle *handle,
 	unsigned int type, unsigned int code, int value)
 {
@@ -1998,10 +2050,18 @@ static int sde_encoder_resource_control(struct drm_encoder *drm_enc,
 
 		/* return if the resource control is already in ON state */
 		if (sde_enc->rc_state == SDE_ENC_RC_STATE_ON) {
+			bool update_rsc = false;
 			SDE_DEBUG_ENC(sde_enc, "sw_event:%d, rc in ON state\n",
 					sw_event);
 			SDE_EVT32(DRMID(drm_enc), sw_event, sde_enc->rc_state,
 				SDE_EVTLOG_FUNC_CASE1);
+
+			update_rsc = sde_enc->cur_master &&
+				sde_connector_qsync_updated(sde_enc->cur_master->connector);
+			if (update_rsc) {
+				_sde_encoder_update_rsc_client(drm_enc, NULL, true);
+			}
+
 			mutex_unlock(&sde_enc->rc_lock);
 			return 0;
 		} else if (sde_enc->rc_state != SDE_ENC_RC_STATE_OFF &&
@@ -2294,6 +2354,8 @@ static int sde_encoder_resource_control(struct drm_encoder *drm_enc,
 			return 0;
 		}
 
+		_sde_panel_input_boost(drm_enc, false);
+
 		if (is_vid_mode) {
 			_sde_encoder_irq_control(drm_enc, false);
 		} else {
@@ -2358,6 +2420,8 @@ static int sde_encoder_resource_control(struct drm_encoder *drm_enc,
 					&sde_enc->delayed_off_work,
 					msecs_to_jiffies(
 					IDLE_POWERCOLLAPSE_IN_EARLY_WAKEUP));
+
+			_sde_panel_input_boost(drm_enc, true);
 
 			sde_enc->rc_state = SDE_ENC_RC_STATE_ON;
 		}
@@ -2459,11 +2523,13 @@ static void sde_encoder_virt_mode_set(struct drm_encoder *drm_enc,
 			return;
 		}
 
-		/*
-		 * Disable dsc before switch the mode and after pre_modeset,
-		 * to guarantee that previous kickoff finished.
-		 */
-		_sde_encoder_dsc_disable(sde_enc);
+		if (msm_is_mode_seamless_panel_dms(adj_mode)) {
+			/*
+			 * Disable dsc before switch the mode and after pre_modeset,
+			 * to guarantee that previous kickoff finished.
+			 */
+			_sde_encoder_dsc_disable(sde_enc);
+		}
 	}
 
 	/* Reserve dynamic resources now. Indicating non-AtomicTest phase */
@@ -3078,6 +3144,25 @@ static void sde_encoder_frame_done_callback(
 	}
 }
 
+static void sde_encoder_get_qsync_fps_callback(
+	struct drm_encoder *drm_enc,
+	u32 *qsync_fps)
+{
+	struct msm_display_info *disp_info;
+	struct sde_encoder_virt *sde_enc;
+
+	sde_enc = to_sde_encoder_virt(drm_enc);
+
+	if (!qsync_fps)
+		return;
+	*qsync_fps = 0;
+
+	if (sde_enc) {
+		disp_info = &sde_enc->disp_info;
+		*qsync_fps = disp_info->qsync_min_fps;
+	}
+}
+
 int sde_encoder_idle_request(struct drm_encoder *drm_enc)
 {
 	struct sde_encoder_virt *sde_enc;
@@ -3405,8 +3490,6 @@ static void _sde_encoder_kickoff_phys(struct sde_encoder_virt *sde_enc)
 				pending_flush);
 	}
 
-	_sde_encoder_trigger_start(sde_enc->cur_master);
-
 	spin_unlock_irqrestore(&sde_enc->enc_spinlock, lock_flags);
 
 	if (sde_enc->elevated_ahb_vote) {
@@ -3422,6 +3505,8 @@ static void _sde_encoder_kickoff_phys(struct sde_encoder_virt *sde_enc)
 		}
 		sde_enc->elevated_ahb_vote = false;
 	}
+
+	_sde_encoder_trigger_start(sde_enc->cur_master);
 }
 
 static void _sde_encoder_ppsplit_swap_intf_for_right_only_update(
@@ -3886,6 +3971,50 @@ int sde_encoder_poll_line_counts(struct drm_encoder *drm_enc)
 	return -ETIMEDOUT;
 }
 
+static int _helper_flush_mixer(struct sde_encoder_phys *phys_enc)
+{
+	struct drm_encoder *drm_enc;
+	struct sde_hw_mixer_cfg mixer;
+	struct sde_rm_hw_iter lm_iter;
+	bool lm_valid = false;
+
+	if (!phys_enc || !phys_enc->parent) {
+		SDE_ERROR("invalid encoder\n");
+		return -EINVAL;
+	}
+
+	drm_enc = phys_enc->parent;
+	memset(&mixer, 0, sizeof(mixer));
+
+	sde_rm_init_hw_iter(&lm_iter, drm_enc->base.id, SDE_HW_BLK_LM);
+	while (sde_rm_get_hw(&phys_enc->sde_kms->rm, &lm_iter)) {
+		struct sde_hw_mixer *hw_lm = (struct sde_hw_mixer *)lm_iter.hw;
+
+		if (!hw_lm)
+			continue;
+
+		/* update LM flush */
+		if (phys_enc->hw_ctl->ops.get_bitmask_mixer &&
+				phys_enc->hw_ctl->ops.update_pending_flush) {
+
+			phys_enc->hw_ctl->ops.update_pending_flush(
+					phys_enc->hw_ctl,
+					phys_enc->hw_ctl->ops.get_bitmask_mixer(
+					phys_enc->hw_ctl, hw_lm->idx));
+		}
+
+		lm_valid = true;
+	}
+
+	if (!lm_valid) {
+		SDE_ERROR_ENC(to_sde_encoder_virt(drm_enc),
+			"lm not found to flush\n");
+		return -EFAULT;
+	}
+
+	return 0;
+}
+
 int sde_encoder_prepare_for_kickoff(struct drm_encoder *drm_enc,
 		struct sde_encoder_kickoff_params *params)
 {
@@ -3932,6 +4061,12 @@ int sde_encoder_prepare_for_kickoff(struct drm_encoder *drm_enc,
 			if (phys->enable_state == SDE_ENC_ERR_NEEDS_HW_RESET)
 				needs_hw_reset = true;
 			_sde_encoder_setup_dither(phys);
+
+			/* flush the mixer if qsync is enabled*/
+			if (sde_enc->cur_master && sde_connector_qsync_updated(
+					sde_enc->cur_master->connector)) {
+				_helper_flush_mixer(phys);
+			}
 		}
 	}
 	SDE_ATRACE_END("enc_prepare_for_kickoff");
@@ -4487,6 +4622,7 @@ static int sde_encoder_setup_display(struct sde_encoder_virt *sde_enc,
 		sde_encoder_vblank_callback,
 		sde_encoder_underrun_callback,
 		sde_encoder_frame_done_callback,
+		sde_encoder_get_qsync_fps_callback,
 	};
 	struct sde_enc_phys_init_params phys_params;
 

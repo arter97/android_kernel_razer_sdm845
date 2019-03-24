@@ -1,0 +1,22 @@
+&qupv3_se7_i2c {
+	status = "ok";
+	wl_p9221@61 {
+		compatible = "idt,p9221";
+		reg = <0x61>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <124 0x00>;
+		p9221,gpio-int = <&tlmm 124 0x00>;
+		p9221,gpio-en = <&pmi8998_gpios 2 0x00>;
+		p9221,fod-bpp = [a7 2f 8b 34 8f 2c 99 1d a4 01 b0 d3];
+		p9221,fod-epp = [af 2c 8e 48 86 63 8c 57 90 4d 9a 17];
+		p9221,temp-control-enable;
+		p9221,temp-ranges =
+			<0	340	5000000	1000000	9000000	1250000		/* 11.25W */
+			 341	400	5000000	1000000	9000000	833000		/*  7.50W */
+			 401	440	5000000	1000000	5000000	1000000		/*  5.00W */
+			 441	550	5000000	500000	5000000	500000>;	/*  2.50W */
+		p9221,temp-hysteresis = <9>;
+		io-channels = <&pmi8998_rradc 2>;
+		io-channel-names = "skin_temp";
+	};
+};

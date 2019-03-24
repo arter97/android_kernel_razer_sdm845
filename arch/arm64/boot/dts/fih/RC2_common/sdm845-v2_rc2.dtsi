@@ -1,0 +1,4 @@
+#include "sdm845-fih-memmap.dtsi"
+#include "sdm845-fih-apr.dtsi"
+#include "sdm845-fih-ddr.dtsi"
+#include "sdm845-fih-mfd.dtsi"

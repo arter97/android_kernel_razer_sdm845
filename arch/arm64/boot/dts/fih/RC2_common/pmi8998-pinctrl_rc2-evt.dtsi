@@ -1,0 +1,191 @@
+&pmi8998_gpios {
+	interrupts = <0x2 0xc0 0 IRQ_TYPE_NONE>,
+			<0x2 0xc1 0 IRQ_TYPE_NONE>,
+			<0x2 0xc2 0 IRQ_TYPE_NONE>,
+			<0x2 0xc4 0 IRQ_TYPE_NONE>,
+			<0x2 0xc5 0 IRQ_TYPE_NONE>,
+			<0x2 0xc7 0 IRQ_TYPE_NONE>,
+			<0x2 0xc8 0 IRQ_TYPE_NONE>,
+			<0x2 0xc9 0 IRQ_TYPE_NONE>,
+			<0x2 0xca 0 IRQ_TYPE_NONE>,
+			<0x2 0xcb 0 IRQ_TYPE_NONE>,
+			<0x2 0xcd 0 IRQ_TYPE_NONE>;
+	interrupt-names = "pmi8998_gpio1", "pmi8998_gpio2",
+			"pmi8998_gpio3", "pmi8998_gpio5",
+			"pmi8998_gpio6", "pmi8998_gpio8",
+			"pmi8998_gpio9", "pmi8998_gpio10",
+			"pmi8998_gpio11", "pmi8998_gpio12",
+			"pmi8998_gpio14";
+	qcom,gpios-disallowed = <4 7 13>;
+
+	pmi8998_gpio1 { /* WLED_EXT_FET_CTRL_N */
+		pmi8998_gpio1_default: pmi8998_gpio1_default {
+			pins = "gpio1";
+			function = "func1";
+			output-low;
+			power-source = <1>;
+		};
+		pmi8998_gpio1_sleep: pmi8998_gpio1_sleep {
+			pins = "gpio1";
+			function = "normal";
+			input-enable;
+			bias-pull-down;
+			power-source = <1>;
+		};
+	};
+
+	pmi8998_gpio2 { /* WP_EN */
+		pmi8998_gpio2_default: pmi8998_gpio2_default {
+			pins = "gpio2";
+			function = "normal";
+			output-low;
+			power-source = <0>;
+		};
+
+		pmi8998_gpio2_sleep: pmi8998_gpio2_sleep {
+			pins = "gpio2";
+			function = "normal";
+			output-high;
+			power-source = <0>;
+		};
+	};
+
+	pmi8998_gpio3 { /* PMI_GPIO_3 / TP1502 */
+		pmi8998_gpio3_default: pmi8998_gpio3_default {
+			pins = "gpio3";
+			function = "normal";
+			input-enable;
+			bias-pull-down;
+			power-source = <1>;
+		};
+		pmi8998_gpio3_sleep: pmi8998_gpio3_sleep {
+			pins = "gpio3";
+			function = "normal";
+			input-enable;
+			bias-pull-down;
+			power-source = <1>;
+		};
+	};
+
+	/*pmi8998_gpio4 { // TYPEC_UUSB_SEL - disallow config
+	}*/
+
+	pmi8998_gpio5 { /* HAPTICS_EN */
+		pmi8998_gpio5_default: pmi8998_gpio5_default {
+			pins = "gpio5";
+			function = "normal";
+			output-high;
+			power-source = <0>;
+		};
+		pmi8998_gpio5_sleep: pmi8998_gpio5_sleep {
+			pins = "gpio5";
+			function = "normal";
+			input-enable;
+			bias-pull-down;
+			power-source = <0>;
+		};
+	};
+
+	pmi8998_gpio6 { /* QNOVO_EXT_FET_CTL */
+		pmi8998_gpio6_default: pmi8998_gpio6_default {
+			pins = "gpio6";
+			function = "func1";
+			output-low;
+			power-source = <1>;
+		};
+		pmi8998_gpio6_sleep: pmi8998_gpio6_sleep {
+			pins = "gpio6";
+			function = "normal";
+			input-enable;
+			bias-pull-down;
+			power-source = <1>;
+		};
+	};
+
+	/*pmi8998_gpio7 { // LCM_SEL - disallow config
+	};*/
+
+	pmi8998_gpio8 { /* US_EURO_SEL */
+		pmi8998_gpio8_sleep: pmi8998_gpio8_sleep {
+			pins = "gpio8";
+			function = "normal";
+			input-enable;
+			bias-pull-down;
+			power-source = <0>;
+		};
+	};
+
+	pmi8998_gpio9 { /* PMI_GPIO_9 / TP1504 */
+		pmi8998_gpio9_default: pmi8998_gpio9_default {
+			pins = "gpio9";
+			function = "normal";
+			input-enable;
+			bias-pull-down;
+			power-source = <0>;
+		};
+		pmi8998_gpio9_sleep: pmi8998_gpio9_sleep {
+			pins = "gpio9";
+			function = "normal";
+			input-enable;
+			bias-pull-down;
+			power-source = <0>;
+		};
+	};
+
+	pmi8998_gpio10 { /* PMI_GPIO_10 / TP1509 */
+		pmi8998_gpio10_default: pmi8998_gpio10_default {
+			pins = "gpio10";
+			function = "normal";
+			input-enable;
+			bias-pull-down;
+			power-source = <0>;
+		};
+	};
+
+	pmi8998_gpio11 { /* PMI_GPIO_11 / TP1505 */
+		pmi8998_gpio11_default: pmi8998_gpio11_default {
+			pins = "gpio11";
+			function = "normal";
+			input-enable;
+			bias-pull-down;
+			power-source = <1>;
+		};
+		pmi8998_gpio11_sleep: pmi8998_gpio11_sleep {
+			pins = "gpio11";
+			function = "normal";
+			input-enable;
+			bias-pull-down;
+			power-source = <1>;
+		};
+	};
+
+	pmi8998_gpio12 { /* PMI_GPIO_12 / TP1506 */
+		pmi8998_gpio12_default: pmi8998_gpio12_default {
+			pins = "gpio12";
+			function = "normal";
+			input-enable;
+			bias-pull-down;
+			power-source = <0>;
+		};
+		pmi8998_gpio12_sleep: pmi8998_gpio12_sleep {
+			pins = "gpio12";
+			function = "normal";
+			input-enable;
+			bias-pull-down;
+			power-source = <0>;
+		};
+	};
+
+	/*pmi8998_gpio13 { // SPMI_I2C_SEL - disallow config
+	};*/
+
+	pmi8998_gpio14 { /* PMI_GPIO_14 / TP1507 */
+		pmi8998_gpio14_sleep: pmi8998_gpio14_sleep {
+			pins = "gpio14";
+			function = "normal";
+			input-enable;
+			bias-pull-down;
+			power-source = <0>;
+		};
+	};
+};

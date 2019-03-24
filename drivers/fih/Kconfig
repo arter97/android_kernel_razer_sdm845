@@ -1,0 +1,213 @@
+#
+# fih driver
+#
+
+menu "fih driver"
+
+config FIH
+	bool "fih"
+	default n
+	help
+	  support fih
+
+
+config FIH_RC2
+	bool "fih_rc2"
+	default n
+	help
+	  support fih_rc2
+
+config FIH_APR
+	bool "fih apr"
+	depends on FIH
+	default n
+	help
+	  support fih apr virtual file
+
+config FIH_INFO
+	bool "fih info"
+	depends on FIH
+	default n
+	help
+	  support fih info virtual file
+
+config FIH_GPIO
+	bool "fih gpio"
+	depends on FIH
+	default n
+	help
+	  support fih gpio function
+
+config FIH_DDR
+	bool "fih ddr"
+	depends on FIH
+	default n
+	help
+	  support fih ddr virtual file
+
+config FIH_MFD
+	bool "fih mfd"
+	depends on FIH
+	default n
+	help
+	  support fih mfd virtual file
+
+config FIH_NV
+	bool "fih nv"
+	depends on FIH
+	default n
+	help
+	  support fih nv function
+
+config FIH_SUT
+	bool "fih sut"
+	depends on FIH
+	default n
+	help
+	  support fih sut virtual file
+
+config FIH_FVER
+	bool "fih fver"
+	depends on FIH
+	default n
+	help
+	  support fih fver virtual file
+
+config FIH_UFS
+	bool "fih ufs"
+	depends on FIH
+	default n
+	help
+	  support fih ufs virtual file
+
+config FIH_TOUCH
+	bool "fih touch"
+	depends on FIH
+	default n
+	help
+	  support fih touch virtual file
+
+config FIH_LOG
+	bool "fih log"
+	depends on FIH
+	default n
+	help
+	  support fih log virtual file
+
+config FIH_CDA
+	bool "fih cda"
+	depends on FIH
+	default n
+	help
+	  support fih cda virtual file
+
+config FIH_MFR
+	bool "fih mfr"
+	depends on FIH
+	default y
+	help
+	  support fih mfr virtual file
+
+config FIH_SAMP
+	bool "fih samp"
+	depends on FIH
+	default n
+	help
+	  support fih samp virtual file
+
+config FIH_SENSOR
+	bool "fih sensor"
+	depends on FIH
+	default n
+	help
+	  support fih sensor virtual file
+
+config FIH_USB
+	bool "fih usb"
+	default n
+	help
+	  support FIH USB Driver
+
+config FIH_HAC
+	bool "fih hac"
+	default n
+	help
+	  support fih hac virtual file
+
+config FIH_HALL_SENSOR
+	bool "fih hall sensor"
+	depends on FIH
+	default n
+	help
+	  support fih hall sensor driver
+
+config FIH_SENSOR_POWER
+	bool "fih sensor power"
+	depends on FIH
+	default n
+	help
+	  support fih sensor power
+
+config FIH_CPU
+	bool "fih cpu"
+	depends on FIH
+	default n
+	help
+	  support fih cpu virtual file
+
+config FIH_GYRO
+	bool "fih gyro"
+	depends on FIH
+	default n
+	help
+	  support fih gyro virtual file
+
+config FIH_ALSP
+	bool "fih alsp"
+	depends on FIH
+	default n
+	help
+	  support fih alsp virtual file
+
+config FIH_BATTERY
+	bool "fih battery"
+	depends on FIH
+	default n
+	help
+	  support fih battery
+
+config FIH_LCM
+	bool "fih Lcm"
+	depends on FIH
+	default n
+	help
+	  support fih Lcm
+
+config FIH_SUSPEND_RESUME_LOG
+	bool "FIH LOG about suspend/resume"
+	depends on FIH
+	default n
+	help
+	  Enable more log for suspend/resume debugging.
+
+config FIH_DUMP_WAKELOCK
+	bool "Show wakelock info after screen off."
+	depends on FIH
+	default n
+	help
+	  Show active wakelock info after screen off.
+
+config FIH_RPMH_MASTER_STATS
+	bool "Show rpmh master stats."
+	depends on FIH
+	default n
+	help
+	  Show rpmh master stats when device resume from suspend.
+
+config FIH_FOD_TEST
+	bool "fih fod test"
+	depends on FIH
+	default n
+	help
+	  support fih fod battery
+endmenu

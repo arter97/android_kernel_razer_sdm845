@@ -156,6 +156,8 @@ struct lp55xx_chip {
 	enum lp55xx_engine_index engine_idx;
 	struct lp55xx_engine engines[LP55XX_ENGINE_MAX];
 	const struct firmware *fw;
+	u8 led_patterns;
+	bool force_suspended;
 };
 
 /*
@@ -202,5 +204,7 @@ extern void lp55xx_unregister_sysfs(struct lp55xx_chip *chip);
 /* common device tree population function */
 extern struct lp55xx_platform_data
 *lp55xx_of_populate_pdata(struct device *dev, struct device_node *np);
+
+extern int lp55xx_io_request(struct lp55xx_chip *chip);
 
 #endif /* _LEDS_LP55XX_COMMON_H */

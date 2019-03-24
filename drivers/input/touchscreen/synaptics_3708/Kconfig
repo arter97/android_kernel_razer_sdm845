@@ -1,0 +1,117 @@
+#
+# Synaptics DSX touchscreen driver configuration
+#
+menuconfig TOUCHSCREEN_SYNAPTICS_3708
+	bool "Synaptics DSX touchscreen"
+	default y
+	help
+	  Say Y here if you have a Synaptics DSX touchscreen connected
+	  to your system.
+
+	  If unsure, say N.
+
+if TOUCHSCREEN_SYNAPTICS_3708
+
+choice
+	default TOUCHSCREEN_SYNAPTICS_3708_I2C
+	prompt "Synaptics DSX bus interface"
+config TOUCHSCREEN_SYNAPTICS_3708_I2C
+	bool "RMI over I2C"
+	depends on I2C
+config TOUCHSCREEN_SYNAPTICS_3708_SPI
+	bool "RMI over SPI"
+	depends on SPI_MASTER
+config TOUCHSCREEN_SYNAPTICS_3708_RMI_HID_I2C
+	bool "HID over I2C"
+	depends on I2C
+endchoice
+
+config TOUCHSCREEN_SYNAPTICS_3708_CORE
+	tristate "Synaptics DSX core driver module"
+	depends on I2C || SPI_MASTER
+	help
+	  Say Y here to enable basic touch reporting functionality.
+
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called synaptics_3708_core.
+
+config TOUCHSCREEN_SYNAPTICS_3708_RMI_DEV
+	tristate "Synaptics DSX RMI device module"
+	depends on TOUCHSCREEN_SYNAPTICS_3708_CORE
+	help
+	  Say Y here to enable support for direct RMI register access.
+
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called synaptics_3708_rmi_dev.
+
+config TOUCHSCREEN_SYNAPTICS_3708_FW_UPDATE
+	tristate "Synaptics DSX firmware update module"
+	depends on TOUCHSCREEN_SYNAPTICS_3708_CORE
+	help
+	  Say Y here to enable support for doing firmware update.
+
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called synaptics_3708_fw_update.
+
+config TOUCHSCREEN_SYNAPTICS_3708_TEST_REPORTING
+	tristate "Synaptics DSX test reporting module"
+	depends on TOUCHSCREEN_SYNAPTICS_3708_CORE
+	help
+	  Say Y here to enable support for retrieving production test reports.
+
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called synaptics_3708_test_reporting.
+
+config TOUCHSCREEN_SYNAPTICS_3708_PROXIMITY
+	tristate "Synaptics DSX proximity module"
+	depends on TOUCHSCREEN_SYNAPTICS_3708_CORE
+	help
+	  Say Y here to enable support for proximity functionality.
+
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called synaptics_3708_proximity.
+
+config TOUCHSCREEN_SYNAPTICS_3708_ACTIVE_PEN
+	tristate "Synaptics DSX active pen module"
+	depends on TOUCHSCREEN_SYNAPTICS_3708_CORE
+	help
+	  Say Y here to enable support for active pen functionality.
+
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called synaptics_3708_active_pen.
+
+config TOUCHSCREEN_SYNAPTICS_3708_GESTURE
+	tristate "Synaptics DSX user defined gesture module"
+	depends on TOUCHSCREEN_SYNAPTICS_3708_CORE
+	help
+	  Say Y here to enable support for user defined gesture functionality.
+
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called synaptics_3708_gesture.
+
+config TOUCHSCREEN_SYNAPTICS_3708_VIDEO
+	tristate "Synaptics DSX video module"
+	depends on TOUCHSCREEN_SYNAPTICS_3708_CORE
+	help
+	  Say Y here to enable support for video communication functionality.
+
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called synaptics_3708_video.
+
+endif

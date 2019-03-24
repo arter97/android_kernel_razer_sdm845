@@ -244,6 +244,10 @@ static void dp_usbpd_send_event(struct dp_usbpd_private *pd,
 	}
 }
 
+#ifdef CONFIG_USB_TUSB544
+extern int tusb544_notify_dp_status(bool connected);
+#endif
+
 static void dp_usbpd_connect_cb(struct usbpd_svid_handler *hdlr)
 {
 	struct dp_usbpd_private *pd;
@@ -255,6 +259,9 @@ static void dp_usbpd_connect_cb(struct usbpd_svid_handler *hdlr)
 	}
 
 	pr_debug("\n");
+	#ifdef CONFIG_USB_TUSB544
+	tusb544_notify_dp_status(true);
+	#endif
 	dp_usbpd_send_event(pd, DP_USBPD_EVT_DISCOVER);
 }
 
@@ -274,6 +281,10 @@ static void dp_usbpd_disconnect_cb(struct usbpd_svid_handler *hdlr)
 
 	if (pd->dp_cb && pd->dp_cb->disconnect)
 		pd->dp_cb->disconnect(pd->dev);
+
+	#ifdef CONFIG_USB_TUSB544
+	tusb544_notify_dp_status(false);
+	#endif
 }
 
 static int dp_usbpd_validate_callback(u8 cmd,

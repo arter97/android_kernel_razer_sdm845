@@ -941,6 +941,7 @@ struct sde_perf_cfg {
  * @sui_misr_supported  indicate if secure-ui-misr is supported
  * @sui_block_xin_mask  mask of all the xin-clients to be blocked during
  *                         secure-ui when secure-ui-misr feature is supported
+* @has_qsync          Supports qsync feature
  */
 struct sde_mdss_cfg {
 	u32 hwversion;
@@ -971,6 +972,7 @@ struct sde_mdss_cfg {
 	bool has_idle_pc;
 	u32 vbif_qos_nlvl;
 	u32 ts_prefill_rev;
+	bool has_qsync;
 
 	bool sui_misr_supported;
 	u32 sui_block_xin_mask;

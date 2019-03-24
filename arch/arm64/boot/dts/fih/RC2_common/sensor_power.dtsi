@@ -1,0 +1,6 @@
+&soc {
+        sensor_power {
+               compatible = "fih,sensor_power";
+               vdd-supply = <&pm8998_lvs2>;
+        };
+};

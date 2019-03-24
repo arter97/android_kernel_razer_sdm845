@@ -42,9 +42,6 @@
 
 #define HFI_MAX_POLL_TRY 5
 
-#define HFI_MAX_PC_POLL_TRY 50
-#define HFI_POLL_TRY_SLEEP 20
-
 static struct hfi_info *g_hfi;
 unsigned int g_icp_mmu_hdl;
 static DEFINE_MUTEX(hfi_cmd_q_mutex);
@@ -516,8 +513,8 @@ void cam_hfi_disable_cpu(void __iomem *icp_base)
 	uint32_t val;
 	uint32_t try = 0;
 
-	while (try < HFI_MAX_PC_POLL_TRY) {
-		data = cam_io_r_mb(icp_base + HFI_REG_A5_CSR_A5_STATUS);
+	while (try < HFI_MAX_POLL_TRY) {
+		data = cam_io_r(icp_base + HFI_REG_A5_CSR_A5_STATUS);
 		CAM_DBG(CAM_HFI, "wfi status = %x\n", (int)data);
 
 		if (data & ICP_CSR_A5_STATUS_WFI)
@@ -526,7 +523,7 @@ void cam_hfi_disable_cpu(void __iomem *icp_base)
 		 * and Host can the proceed. No interrupt is expected from FW
 		 * at this time.
 		 */
-		msleep_interruptible(HFI_POLL_TRY_SLEEP);
+		msleep(100);
 		try++;
 	}
 
@@ -660,7 +657,8 @@ int cam_hfi_init(uint8_t event_driven_mode, struct hfi_mem_info *hfi_mem,
 
 	if (g_hfi->hfi_state != HFI_DEINIT) {
 		CAM_ERR(CAM_HFI, "hfi_init: invalid state");
-		return -EINVAL;
+		rc = -EINVAL;
+		goto alloc_fail;
 	}
 
 	memcpy(&g_hfi->map, hfi_mem, sizeof(g_hfi->map));

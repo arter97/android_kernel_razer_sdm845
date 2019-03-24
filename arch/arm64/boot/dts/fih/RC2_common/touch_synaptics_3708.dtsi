@@ -1,0 +1,21 @@
+&qupv3_se14_i2c{
+	qcom,disable-dma = <1>;
+	status = "ok";
+	synaptics_dsx@20 {
+		compatible = "synaptics,dsx-i2c";
+		reg = <0x20>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <31 0x2008>;
+		vdd-supply = <&pm8998_l28>;
+		synaptics,power-gpio = <&tlmm 44 0x00>; //1.8V LDO enable
+		synaptics,pwr-reg-name = "vdd";
+		synaptics,power-on-state = <1>;
+		synaptics,display-coords = <0 0 1599 2559>;
+		synaptics,panel-coords = <0 0 1599 2703>;
+		synaptics,irq-gpio = <&tlmm 31 0x2008>;  /* IRQF_ONESHOT | IRQF_TRIGGER_LOW */
+		synaptics,reset-gpio = <&tlmm 32 0x00>;
+		synaptics,reset-delay-ms = <100>;
+		synaptics,reset-on-state = <0>;
+		synaptics,reset-active-ms = <20>;
+	};
+};

@@ -1,0 +1,61 @@
+&qupv3_se4_i2c {
+	status = "ok";
+	lp5523@32 {
+		compatible = "national,lp5523";
+		reg = <0x32>;
+		enable-gpio = <&tlmm 23 0x00>;
+		ldo-en-gpio = <&tlmm 26 0x00>;
+		//trig-gpio = <&tlmm 21 0x00>;
+		//int-gpio = <&tlmm 75 0x2008>;
+		//pinctrl-names = "lp55xx_active","lp55xx_suspend";
+		//pinctrl-0 = <&lp55xx_enble_active>;
+		//pinctrl-1 = <&lp55xx_enble_suspend>;
+		clock-mode = /bits/ 8 <1>;
+		chan-name = "lp5523";
+
+		chan0 {
+				led-cur = /bits/ 8 <0x50>;
+				max-cur = /bits/ 8 <0xff>;
+		};
+
+		chan1 {
+				led-cur = /bits/ 8 <0x50>;
+				max-cur = /bits/ 8 <0xff>;
+		};
+
+		chan2 {
+				led-cur = /bits/ 8 <0x50>;
+				max-cur = /bits/ 8 <0xff>;
+		};
+
+		chan3 {
+				led-cur = /bits/ 8 <0x50>;
+				max-cur = /bits/ 8 <0xff>;
+		};
+
+		chan4 {
+				led-cur = /bits/ 8 <0x50>;
+				max-cur = /bits/ 8 <0xff>;
+		};
+
+		chan5 {
+				led-cur = /bits/ 8 <0x50>;
+				max-cur = /bits/ 8 <0xff>;
+		};
+
+		chan6 {
+				led-cur = /bits/ 8 <0x50>;
+				max-cur = /bits/ 8 <0xff>;
+		};
+
+		chan7 {
+				led-cur = /bits/ 8 <0x50>;
+				max-cur = /bits/ 8 <0xff>;
+		};
+
+		chan8 {
+				led-cur = /bits/ 8 <0x50>;
+				max-cur = /bits/ 8 <0xff>;
+		};
+	};
+};

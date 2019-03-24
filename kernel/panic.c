@@ -29,6 +29,10 @@
 #include <trace/events/exception.h>
 #include <soc/qcom/minidump.h>
 
+#ifdef CONFIG_FIH_APR
+#include <fih/fih_rere.h>
+#endif
+
 #define PANIC_TIMER_STEP 100
 #define PANIC_BLINK_SPD 18
 
@@ -138,6 +142,16 @@ void panic(const char *fmt, ...)
 	int state = 0;
 	int old_cpu, this_cpu;
 	bool _crash_kexec_post_notifiers = crash_kexec_post_notifiers;
+
+	#ifdef CONFIG_FIH_APR
+	if (strstr(fmt, "modem")) {
+		pr_err("FIH_APR: MODEM_FATAL\n");
+		qpnp_pon_set_restart_reason(FIH_RERE_MODEM_FATAL);
+	} else {
+		pr_err("FIH_APR: KERNEL_PANIC\n");
+		qpnp_pon_set_restart_reason(FIH_RERE_KERNEL_PANIC);
+	}
+	#endif
 
 	trace_kernel_panic(0);
 

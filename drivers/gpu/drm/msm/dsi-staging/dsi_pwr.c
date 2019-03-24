@@ -15,6 +15,7 @@
 #include <linux/of.h>
 #include <linux/delay.h>
 #include <linux/slab.h>
+#include <linux/gpio.h>
 
 #include "dsi_pwr.h"
 
@@ -170,6 +171,10 @@ static int dsi_pwr_enable_vregs(struct dsi_regulator_info *regs, bool enable)
 		}
 	} else {
 		for (i = (regs->count - 1); i >= 0; i--) {
+			if (i == 0 && !strcmp(regs->vregs[i].vreg_name, "wqhd-vddio")) {
+				gpio_set_value(6, 0);  //Reset pin
+			}
+
 			if (regs->vregs[i].pre_off_sleep)
 				msleep(regs->vregs[i].pre_off_sleep);
 

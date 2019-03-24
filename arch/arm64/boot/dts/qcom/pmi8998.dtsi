@@ -433,7 +433,7 @@
 			compatible = "qcom,leds-qpnp";
 			reg = <0xd000 0x100>;
 			label = "rgb";
-			status = "okay";
+			status = "disabled";
 
 			red_led: qcom,rgb_0 {
 				label = "rgb";
@@ -841,26 +841,22 @@
 			soc_cpu4 {
 				trip = <&low_soc>;
 				cooling-device =
-					<&CPU4 THERMAL_MAX_LIMIT
-						THERMAL_MAX_LIMIT>;
+					<&CPU4 19 19>;
 			};
 			soc_cpu5 {
 				trip = <&low_soc>;
 				cooling-device =
-					<&CPU5 THERMAL_MAX_LIMIT
-						THERMAL_MAX_LIMIT>;
+					<&CPU5 19 19>;
 			};
 			soc_map6 {
 				trip = <&low_soc>;
 				cooling-device =
-					<&CPU6 THERMAL_MAX_LIMIT
-						THERMAL_MAX_LIMIT>;
+					<&CPU6 19 19>;
 			};
 			soc_map7 {
 				trip = <&low_soc>;
 				cooling-device =
-					<&CPU7 THERMAL_MAX_LIMIT
-						THERMAL_MAX_LIMIT>;
+					<&CPU7 19 19>;
 			};
 		};
 	};

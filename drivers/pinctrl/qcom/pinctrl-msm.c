@@ -506,8 +506,44 @@ static void msm_gpio_dbg_show(struct seq_file *s, struct gpio_chip *chip)
 {
 	unsigned gpio = chip->base;
 	unsigned i;
+#ifdef CONFIG_FIH_GPIO
+	unsigned k;
+	int rc = -1;
+	u32 byte_len = 0;
+	u32 skipped_num = 0;
+	u32 *skipped_gpio = NULL;
+	int skipped = 0;
 
+	if (of_find_property(chip->parent->of_node, "fih,skipped-gpio-list", &byte_len)) {
+		skipped_gpio = devm_kzalloc(chip->parent, byte_len, GFP_KERNEL);
+		if (skipped_gpio != NULL) {
+			skipped_num = byte_len / sizeof(u32);
+			rc = of_property_read_u32_array(chip->parent->of_node,
+				"fih,skipped-gpio-list",
+				skipped_gpio,
+				skipped_num);
+			if (rc < 0) {
+				pr_err("Error reading fih,skipped-gpio-list rc:%d", rc);
+			}
+		}
+	}
+#endif
 	for (i = 0; i < chip->ngpio; i++, gpio++) {
+#ifdef CONFIG_FIH_GPIO
+		skipped = 0;
+		if ((skipped_num > 0) && (skipped_gpio != NULL) && (rc == 0)) {
+			for (k = 0; k < skipped_num; ++k) {
+				if (i == skipped_gpio[k]) {
+					pr_err("Skip gpio:%u", skipped_gpio[k]);
+					skipped = 1;
+				}
+			}
+		}
+
+		if (skipped == 1) {
+			continue;
+		}
+#endif
 		msm_gpio_dbg_show_one(s, NULL, chip, i, gpio);
 		seq_puts(s, "\n");
 	}
@@ -629,6 +665,7 @@ static void msm_gpio_irq_enable(struct irq_data *d)
 static void msm_gpio_irq_unmask(struct irq_data *d)
 {
 	struct gpio_chip *gc = irq_data_get_irq_chip_data(d);
+	uint32_t irqtype = irqd_get_trigger_type(d);
 	struct msm_pinctrl *pctrl = gpiochip_get_data(gc);
 	const struct msm_pingroup *g;
 	unsigned long flags;
@@ -637,6 +674,12 @@ static void msm_gpio_irq_unmask(struct irq_data *d)
 	g = &pctrl->soc->groups[d->hwirq];
 
 	spin_lock_irqsave(&pctrl->lock, flags);
+
+	if (irqtype & (IRQF_TRIGGER_HIGH | IRQF_TRIGGER_LOW)) {
+		val = readl_relaxed(pctrl->regs + g->intr_status_reg);
+		val &= ~BIT(g->intr_status_bit);
+		writel_relaxed(val, pctrl->regs + g->intr_status_reg);
+	}
 
 	val = readl(pctrl->regs + g->intr_cfg_reg);
 	val |= BIT(g->intr_enable_bit);

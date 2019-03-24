@@ -343,6 +343,9 @@ int pstore_mkfile(enum pstore_type_id type, char *psname, u64 id, int count,
 		break;
 	case PSTORE_TYPE_CONSOLE:
 		scnprintf(name, sizeof(name), "console-%s-%lld", psname, id);
+		#ifdef CONFIG_FIH
+		if (0 == id) scnprintf(name, sizeof(name), "console-%s", psname);
+		#endif
 		break;
 	case PSTORE_TYPE_FTRACE:
 		scnprintf(name, sizeof(name), "ftrace-%s-%lld", psname, id);

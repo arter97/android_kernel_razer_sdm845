@@ -1,0 +1,19 @@
+/ {
+	reserved-memory {
+		fih_nv_mem: fih_nv_region@0xAF000000 {
+			compatible = "removed-dma-pool";
+			no-map;
+			reg = <0 0xAF000000 0 0x00800000>;
+		};
+		pstore_mem: pstore_region@0xAF800000 {
+			compatible = "removed-dma-pool";
+			no-map;
+			reg = <0 0xAF800000 0 0x00200000>;
+		};
+		fih_mem: fih_region@0xAFA00000 {
+			compatible = "removed-dma-pool";
+			no-map;
+			reg = <0 0xAFA00000 0 0x00600000>;
+		};
+	};
+};

@@ -1658,10 +1658,19 @@ static int lpm_suspend_prepare(void)
 	return 0;
 }
 
+#ifdef CONFIG_FIH_RPMH_MASTER_STATS
+extern void check_msm_rpmh_master_stats(void);
+#endif
+
 static void lpm_suspend_wake(void)
 {
 	suspend_in_progress = false;
 	lpm_stats_suspend_exit();
+
+	#ifdef CONFIG_FIH_RPMH_MASTER_STATS
+	/* After resume from suspend, check rpmh master info */
+	check_msm_rpmh_master_stats();
+	#endif
 }
 
 static int lpm_suspend_enter(suspend_state_t state)

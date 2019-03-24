@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2018, Razer Inc. All rights reserved.
  * Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -65,18 +66,12 @@ enum dsi_dms_mode {
 };
 
 struct dsi_dfps_capabilities {
+	bool dfps_support;
 	enum dsi_dfps_type type;
 	u32 min_refresh_rate;
 	u32 max_refresh_rate;
-	u32 *dfps_list;
-	u32 dfps_list_len;
-	bool dfps_support;
-};
-
-struct dsi_dyn_clk_caps {
-	bool dyn_clk_support;
-	u32 *bit_clk_list;
-	u32 bit_clk_list_len;
+	u32 *rates;
+	size_t num_rates;
 };
 
 struct dsi_pinctrl_info {
@@ -172,7 +167,6 @@ struct dsi_panel {
 	enum dsi_op_mode panel_mode;
 
 	struct dsi_dfps_capabilities dfps_caps;
-	struct dsi_dyn_clk_caps dyn_clk_caps;
 	struct dsi_panel_phy_props phy_props;
 
 	struct dsi_display_mode *cur_mode;
@@ -193,11 +187,19 @@ struct dsi_panel {
 
 	bool panel_initialized;
 	bool te_using_watchdog_timer;
+	u32 qsync_min_fps;
 
 	char dsc_pps_cmd[DSI_CMD_PPS_SIZE];
 	enum dsi_dms_mode dms_mode;
 
 	bool sync_broadcast_en;
+	bool ddic_scaling_en;
+	bool disable_sending_pps;
+
+	u32 pre_switch_vfp;
+	u32 num_idle_frames;
+	u32 cur_num_idle_frames;
+	bool qsync_en;
 };
 
 static inline bool dsi_panel_ulps_feature_enabled(struct dsi_panel *panel)
@@ -281,12 +283,19 @@ int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl);
 
 int dsi_panel_update_pps(struct dsi_panel *panel);
 
+int dsi_panel_send_qsync_on_dcs(struct dsi_panel *panel);
+int dsi_panel_send_qsync_off_dcs(struct dsi_panel *panel);
+
 int dsi_panel_send_roi_dcs(struct dsi_panel *panel, int ctrl_idx,
 		struct dsi_rect *roi);
 
 int dsi_panel_switch(struct dsi_panel *panel);
 
 int dsi_panel_post_switch(struct dsi_panel *panel);
+
+int dsi_panel_set_dfps_vfp_update(struct dsi_panel *panel, u32 force_vfp);
+
+int dsi_panel_set_input_boost(struct dsi_panel *panel, bool enable_boost);
 
 void dsi_dsc_pclk_param_calc(struct msm_display_dsc_info *dsc, int intf_width);
 

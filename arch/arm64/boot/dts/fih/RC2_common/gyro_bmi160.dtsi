@@ -1,0 +1,7 @@
+&soc {
+	fih_gyro {
+		compatible = "fih_gyro";
+		status = "ok";
+		fih-gyro,gyroinfo = "BMI160";
+	};
+};

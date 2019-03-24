@@ -229,6 +229,12 @@ enum hap_play_control {
 	HAP_PLAY,
 };
 
+static char qpnp_hap_dbg_regs[] = {
+	0x0a, 0x0b, 0x0c, 0x46, 0x48, 0x4c, 0x4d, 0x4e, 0x4f, 0x51, 0x52, 0x53,
+	0x54, 0x55, 0x56, 0x57, 0x58, 0x5c, 0x5e, 0x60, 0x61, 0x62, 0x63, 0x64,
+	0x65, 0x66, 0x67, 0x70, 0xE3,
+};
+
 /* pwm channel parameters */
 struct pwm_param {
 	struct pwm_device	*pwm_dev;
@@ -1255,7 +1261,10 @@ static int qpnp_haptics_auto_mode_config(struct hap_chip *chip, int time_ms)
 			ares_cfg.lra_qwd_drive_duration = 0;
 			ares_cfg.calibrate_at_eop = 0;
 		} else {
-			ares_cfg.auto_res_mode = HAP_AUTO_RES_ZXD_EOP;
+			if(chip->ares_cfg.auto_res_mode != HAP_AUTO_RES_NONE)
+				ares_cfg.auto_res_mode = HAP_AUTO_RES_QWD;
+			else
+				ares_cfg.auto_res_mode = HAP_AUTO_RES_NONE;
 			ares_cfg.lra_qwd_drive_duration = -EINVAL;
 			ares_cfg.calibrate_at_eop = -EINVAL;
 		}
@@ -1284,7 +1293,10 @@ static int qpnp_haptics_auto_mode_config(struct hap_chip *chip, int time_ms)
 			ares_cfg.lra_qwd_drive_duration = 0;
 			ares_cfg.calibrate_at_eop = 1;
 		} else {
-			ares_cfg.auto_res_mode = HAP_AUTO_RES_QWD;
+			if(chip->ares_cfg.auto_res_mode != HAP_AUTO_RES_NONE)
+				ares_cfg.auto_res_mode = HAP_AUTO_RES_ZXD_EOP;
+			else
+				ares_cfg.auto_res_mode = HAP_AUTO_RES_NONE;
 			ares_cfg.lra_res_cal_period = HAP_RES_CAL_PERIOD_MAX;
 			ares_cfg.lra_qwd_drive_duration = -EINVAL;
 			ares_cfg.calibrate_at_eop = -EINVAL;
@@ -1798,6 +1810,22 @@ static ssize_t qpnp_haptics_store_lra_auto_mode(struct device *dev,
 	return count;
 }
 
+static ssize_t qpnp_haptics_show_dump_regs(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct led_classdev *cdev = dev_get_drvdata(dev);
+	struct hap_chip *chip = container_of(cdev, struct hap_chip, cdev);
+	int count = 0, i;
+	u8 val;
+
+	for (i = 0; i < ARRAY_SIZE(qpnp_hap_dbg_regs); i++) {
+		qpnp_haptics_read_reg(chip, chip->base + qpnp_hap_dbg_regs[i], &val, 1);
+		count += snprintf(buf + count, PAGE_SIZE - count, "qpnp_haptics: REG_0x%x = 0x%x\n", chip->base + qpnp_hap_dbg_regs[i], val);
+	}
+
+	return count;
+}
+
 static struct device_attribute qpnp_haptics_attrs[] = {
 	__ATTR(state, 0664, qpnp_haptics_show_state, qpnp_haptics_store_state),
 	__ATTR(duration, 0664, qpnp_haptics_show_duration,
@@ -1815,6 +1843,7 @@ static struct device_attribute qpnp_haptics_attrs[] = {
 	__ATTR(vmax_mv, 0664, qpnp_haptics_show_vmax, qpnp_haptics_store_vmax),
 	__ATTR(lra_auto_mode, 0664, qpnp_haptics_show_lra_auto_mode,
 		qpnp_haptics_store_lra_auto_mode),
+	__ATTR(dump_regs, 0664, qpnp_haptics_show_dump_regs, NULL),
 };
 
 /* Dummy functions for brightness */

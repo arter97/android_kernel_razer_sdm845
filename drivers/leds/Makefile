@@ -1,4 +1,15 @@
 
+ccflags-y += -Idrivers/media/platform/msm/camera/cam_req_mgr
+ccflags-y += -Idrivers/media/platform/msm/camera/cam_smmu/
+ccflags-y += -Idrivers/media/platform/msm/camera/cam_sync
+ccflags-y += -Idrivers/media/platform/msm/camera/cam_utils
+ccflags-y += -Idrivers/media/platform/msm/camera/cam_sensor_module/cam_sensor
+ccflags-y += -Idrivers/media/platform/msm/camera/cam_sensor_module/cam_cci
+ccflags-y += -Idrivers/media/platform/msm/camera/cam_sensor_module/cam_sensor_utils
+ccflags-y += -Idrivers/media/platform/msm/camera/cam_cpas/include
+ccflags-y += -Idrivers/media/platform/msm/camera/cam_sensor_module/cam_sensor_io
+
+
 # LED Core
 obj-$(CONFIG_NEW_LEDS)			+= led-core.o
 obj-$(CONFIG_LEDS_CLASS)		+= led-class.o
@@ -15,6 +26,7 @@ obj-$(CONFIG_LEDS_LOCOMO)		+= leds-locomo.o
 obj-$(CONFIG_LEDS_LM3530)		+= leds-lm3530.o
 obj-$(CONFIG_LEDS_LM3533)		+= leds-lm3533.o
 obj-$(CONFIG_LEDS_LM3642)		+= leds-lm3642.o
+obj-$(CONFIG_LEDS_LM3644)		+= leds-lm3644.o
 obj-$(CONFIG_LEDS_MIKROTIK_RB532)	+= leds-rb532.o
 obj-$(CONFIG_LEDS_S3C24XX)		+= leds-s3c24xx.o
 obj-$(CONFIG_LEDS_NET48XX)		+= leds-net48xx.o

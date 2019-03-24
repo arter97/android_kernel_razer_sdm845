@@ -1,0 +1,578 @@
+#include "dsi-panel-nt36830-wqhd-dualmipi-cmd.dtsi"
+#include "dsi-panel-nt36830-wqhd-dualmipi-video.dtsi"
+#include "dsi-panel-nt36830-wqhd-dualmipi-cmd-30hz.dtsi"
+#include "dsi-panel-nt36830-wqhd-dualmipi-video-30hz.dtsi"
+#include "dsi-panel-nt36830-wqhd-dualmipi-cmd-48hz.dtsi"
+
+#include "dsi-panel-nt36830-wqhd-dualmipi-extclk-cmd.dtsi"
+#include "dsi-panel-nt36830-wqhd-dualmipi-extclk-video.dtsi"
+#include "dsi-panel-nt36830-wqhd-dualmipi-cmd-extclk-30hz.dtsi"
+#include "dsi-panel-nt36830-wqhd-dualmipi-video-extclk-30hz.dtsi"
+#include "dsi-panel-nt36830-wqhd-dualmipi-cmd-extclk-48hz.dtsi"
+
+&dsi_nt35597_truly_dsc_cmd_display {
+/delete-property/qcom,dsi-display-active;
+};
+
+&mdss_mdp {
+	connectors = <&sde_rscc &sde_wb &sde_dp>;
+};
+
+&pm8998_l14{
+	regulator-min-microvolt = <1800000>;
+	regulator-max-microvolt = <1800000>;
+	status = "okay";
+};
+
+&pm8998_l6{
+	regulator-min-microvolt = <1800000>;
+	regulator-max-microvolt = <1800000>;
+	status = "okay";
+};
+
+&ibb_regulator{
+	qcom,qpnp-ibb-init-lcd-voltage = <5800000>;
+	qcom,qpnp-ibb-init-voltage = <5800000>;
+	qcom,qpnp-ibb-enable-pfm-mode;
+	qcom,qpnp-ibb-pfm-peak-curr = <350>;
+	qcom,qpnp-ibb-pfm-hysteresis = <0>;
+	status = "okay";
+};
+
+&lab_regulator{
+	qcom,qpnp-lab-init-lcd-voltage = <5800000>;
+	qcom,qpnp-lab-init-voltage = <5800000>;
+	qcom,qpnp-lab-enable-pfm-mode;
+	status = "okay";
+};
+
+
+&soc {
+	dsi_nt36830_panel_pwr_supply: dsi_panel_pwr_supply {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		qcom,panel-supply-entry@0 {
+			reg = <0>;
+			qcom,supply-name = "wqhd-vddio";
+			qcom,supply-min-voltage = <1800000>;
+			qcom,supply-max-voltage = <1800000>;
+			qcom,supply-enable-load = <32000>;
+			qcom,supply-disable-load = <80>;
+			qcom,supply-pre-off-sleep = <1>;
+			qcom,supply-post-off-sleep = <0>;
+		};
+
+		qcom,panel-supply-entry@1 {
+			reg = <0>;
+			qcom,supply-name = "exclk";
+			qcom,supply-min-voltage = <1800000>;
+			qcom,supply-max-voltage = <1800000>;
+			qcom,supply-enable-load = <32000>;
+			qcom,supply-disable-load = <80>;
+			qcom,supply-pre-off-sleep = <1>;
+			qcom,supply-post-off-sleep = <0>;
+		};
+
+
+		qcom,panel-supply-entry@2 {
+			reg = <1>;
+			qcom,supply-name = "ibb";
+			qcom,supply-min-voltage = <5800000>;
+			qcom,supply-max-voltage = <5800000>;
+			qcom,supply-enable-load = <100000>;
+			qcom,supply-disable-load = <100>;
+			qcom,supply-pre-off-sleep = <0>;
+			qcom,supply-post-off-sleep = <5>;
+		};
+
+		qcom,panel-supply-entry@3 {
+			reg = <2>;
+			qcom,supply-name = "lab";
+			qcom,supply-min-voltage = <5800000>;
+			qcom,supply-max-voltage = <5800000>;
+			qcom,supply-enable-load = <100000>;
+			qcom,supply-disable-load = <100>;
+			qcom,supply-pre-off-sleep = <0>;
+			qcom,supply-post-off-sleep = <0>;
+		};
+
+	};
+
+	mdss_dsi_nt36830_wqhd_dualdsi_cmd: qcom,dsi-display@24 {
+		compatible = "qcom,dsi-display";
+		label = "mdss_dsi_nt36830_wqhd_dualdsi_cmd";
+		qcom,display-type = "primary";
+
+		qcom,dsi-ctrl = <&mdss_dsi0 &mdss_dsi1>;
+		qcom,dsi-phy = <&mdss_dsi_phy0 &mdss_dsi_phy1>;
+		clocks = <&mdss_dsi0_pll BYTECLK_MUX_0_CLK>,
+			<&mdss_dsi0_pll PCLK_MUX_0_CLK>;
+		clock-names = "src_byte_clk", "src_pixel_clk";
+
+		pinctrl-names = "panel_active", "panel_suspend";
+		pinctrl-0 = <&sdm845_gpio6_active &sdm845_gpio10_active>;
+		pinctrl-1 = <&sdm845_gpio6_sleep &sdm845_gpio10_sleep>;
+		qcom,platform-te-gpio = <&tlmm 10 0>;
+		qcom,platform-reset-gpio = <&tlmm 6 0>;
+
+		qcom,dsi-panel = <&dsi_nt36830_wqhd_dualdsi_cmd>;
+		wqhd-vddio-supply = <&pm8998_l14>;
+		exclk-supply = <&pm8998_l6>;
+		lab-supply = <&lab_regulator>;
+		ibb-supply = <&ibb_regulator>;
+	};
+
+	mdss_dsi_nt36830_wqhd_dualdsi_video: qcom,dsi-display@25 {
+		compatible = "qcom,dsi-display";
+		label = "mdss_dsi_nt36830_wqhd_dualdsi_video";
+		qcom,display-type = "primary";
+
+		qcom,dsi-ctrl = <&mdss_dsi0 &mdss_dsi1>;
+		qcom,dsi-phy = <&mdss_dsi_phy0 &mdss_dsi_phy1>;
+		clocks = <&mdss_dsi0_pll BYTECLK_MUX_0_CLK>,
+			<&mdss_dsi0_pll PCLK_MUX_0_CLK>;
+		clock-names = "src_byte_clk", "src_pixel_clk";
+
+		pinctrl-names = "panel_active", "panel_suspend";
+		pinctrl-0 = <&sdm845_gpio6_active &sdm845_gpio10_active>;
+		pinctrl-1 = <&sdm845_gpio6_sleep &sdm845_gpio10_sleep>;
+		qcom,platform-reset-gpio = <&tlmm 6 0>;
+
+		qcom,dsi-panel = <&dsi_nt36830_wqhd_dualdsi_video>;
+		wqhd-vddio-supply = <&pm8998_l14>;
+		lab-supply = <&lab_regulator>;
+		ibb-supply = <&ibb_regulator>;
+	};
+
+	mdss_dsi_nt36830_wqhd_dualdsi_cmd_30hz: qcom,dsi-display@26 {
+		compatible = "qcom,dsi-display";
+		label = "mdss_dsi_nt36830_wqhd_dualdsi_cmd_30hz";
+		qcom,display-type = "primary";
+
+		qcom,dsi-ctrl = <&mdss_dsi0 &mdss_dsi1>;
+		qcom,dsi-phy = <&mdss_dsi_phy0 &mdss_dsi_phy1>;
+		clocks = <&mdss_dsi0_pll BYTECLK_MUX_0_CLK>,
+			<&mdss_dsi0_pll PCLK_MUX_0_CLK>;
+		clock-names = "src_byte_clk", "src_pixel_clk";
+
+		pinctrl-names = "panel_active", "panel_suspend";
+		pinctrl-0 = <&sdm845_gpio6_active &sdm845_gpio10_active>;
+		pinctrl-1 = <&sdm845_gpio6_sleep &sdm845_gpio10_sleep>;
+		qcom,platform-te-gpio = <&tlmm 10 0>;
+		qcom,platform-reset-gpio = <&tlmm 6 0>;
+
+		qcom,dsi-panel = <&dsi_nt36830_wqhd_dualdsi_cmd_30hz>;
+		wqhd-vddio-supply = <&pm8998_l14>;
+		lab-supply = <&lab_regulator>;
+		ibb-supply = <&ibb_regulator>;
+	};
+
+	mdss_dsi_nt36830_wqhd_dualdsi_video_30hz: qcom,dsi-display@27 {
+		compatible = "qcom,dsi-display";
+		label = "mdss_dsi_nt36830_wqhd_dualdsi_video_30hz";
+		qcom,display-type = "primary";
+
+		qcom,dsi-ctrl = <&mdss_dsi0 &mdss_dsi1>;
+		qcom,dsi-phy = <&mdss_dsi_phy0 &mdss_dsi_phy1>;
+		clocks = <&mdss_dsi0_pll BYTECLK_MUX_0_CLK>,
+			<&mdss_dsi0_pll PCLK_MUX_0_CLK>;
+		clock-names = "src_byte_clk", "src_pixel_clk";
+
+		pinctrl-names = "panel_active", "panel_suspend";
+		pinctrl-0 = <&sdm845_gpio6_active &sdm845_gpio10_active>;
+		pinctrl-1 = <&sdm845_gpio6_sleep &sdm845_gpio10_sleep>;
+		qcom,platform-reset-gpio = <&tlmm 6 0>;
+
+		qcom,dsi-panel = <&dsi_nt36830_wqhd_dualdsi_video_30hz>;
+		wqhd-vddio-supply = <&pm8998_l14>;
+		lab-supply = <&lab_regulator>;
+		ibb-supply = <&ibb_regulator>;
+	};
+
+	mdss_dsi_nt36830_wqhd_dualdsi_cmd_48hz: qcom,dsi-display@28 {
+		compatible = "qcom,dsi-display";
+		label = "mdss_dsi_nt36830_wqhd_dualdsi_cmd_48hz";
+		qcom,display-type = "primary";
+
+		qcom,dsi-ctrl = <&mdss_dsi0 &mdss_dsi1>;
+		qcom,dsi-phy = <&mdss_dsi_phy0 &mdss_dsi_phy1>;
+		clocks = <&mdss_dsi0_pll BYTECLK_MUX_0_CLK>,
+			<&mdss_dsi0_pll PCLK_MUX_0_CLK>;
+		clock-names = "src_byte_clk", "src_pixel_clk";
+
+		pinctrl-names = "panel_active", "panel_suspend";
+		pinctrl-0 = <&sdm845_gpio6_active &sdm845_gpio10_active>;
+		pinctrl-1 = <&sdm845_gpio6_sleep &sdm845_gpio10_sleep>;
+		qcom,platform-te-gpio = <&tlmm 10 0>;
+		qcom,platform-reset-gpio = <&tlmm 6 0>;
+
+		qcom,dsi-panel = <&dsi_nt36830_wqhd_dualdsi_cmd_48hz>;
+		wqhd-vddio-supply = <&pm8998_l14>;
+		lab-supply = <&lab_regulator>;
+		ibb-supply = <&ibb_regulator>;
+	};
+
+	mdss_dsi_nt36830_wqhd_dualdsi_extclk_cmd: qcom,dsi-display@29 {
+		compatible = "qcom,dsi-display";
+		label = "mdss_dsi_nt36830_wqhd_dualdsi_extclk_cmd";
+		qcom,display-type = "primary";
+
+		qcom,dsi-ctrl = <&mdss_dsi0 &mdss_dsi1>;
+		qcom,dsi-phy = <&mdss_dsi_phy0 &mdss_dsi_phy1>;
+		clocks = <&mdss_dsi0_pll BYTECLK_MUX_0_CLK>,
+			<&mdss_dsi0_pll PCLK_MUX_0_CLK>;
+		clock-names = "src_byte_clk", "src_pixel_clk";
+
+		pinctrl-names = "panel_active", "panel_suspend";
+		pinctrl-0 = <&sdm845_gpio6_active &sdm845_gpio10_active>;
+		pinctrl-1 = <&sdm845_gpio6_sleep &sdm845_gpio10_sleep>;
+		qcom,platform-te-gpio = <&tlmm 10 0>;
+		qcom,platform-reset-gpio = <&tlmm 6 0>;
+
+		qcom,dsi-panel = <&dsi_nt36830_wqhd_dualdsi_extclk_cmd>;
+		wqhd-vddio-supply = <&pm8998_l14>;
+		exclk-supply = <&pm8998_l6>;
+		lab-supply = <&lab_regulator>;
+		ibb-supply = <&ibb_regulator>;
+	};
+
+	mdss_dsi_nt36830_wqhd_dualdsi_extclk_video: qcom,dsi-display@30 {
+		compatible = "qcom,dsi-display";
+		label = "mdss_dsi_nt36830_wqhd_dualdsi_extclk_video";
+		qcom,display-type = "primary";
+
+		qcom,dsi-ctrl = <&mdss_dsi0 &mdss_dsi1>;
+		qcom,dsi-phy = <&mdss_dsi_phy0 &mdss_dsi_phy1>;
+		clocks = <&mdss_dsi0_pll BYTECLK_MUX_0_CLK>,
+			<&mdss_dsi0_pll PCLK_MUX_0_CLK>;
+		clock-names = "src_byte_clk", "src_pixel_clk";
+
+		pinctrl-names = "panel_active", "panel_suspend";
+		pinctrl-0 = <&sdm845_gpio6_active &sdm845_gpio10_active>;
+		pinctrl-1 = <&sdm845_gpio6_sleep &sdm845_gpio10_sleep>;
+		qcom,platform-reset-gpio = <&tlmm 6 0>;
+
+		qcom,dsi-panel = <&dsi_nt36830_wqhd_dualdsi_extclk_video>;
+		wqhd-vddio-supply = <&pm8998_l14>;
+		lab-supply = <&lab_regulator>;
+		ibb-supply = <&ibb_regulator>;
+	};
+
+	mdss_dsi_nt36830_wqhd_dualdsi_cmd_extclk_30hz: qcom,dsi-display@31 {
+		compatible = "qcom,dsi-display";
+		label = "mdss_dsi_nt36830_wqhd_dualdsi_cmd_extclk_30hz";
+		qcom,display-type = "primary";
+
+		qcom,dsi-ctrl = <&mdss_dsi0 &mdss_dsi1>;
+		qcom,dsi-phy = <&mdss_dsi_phy0 &mdss_dsi_phy1>;
+		clocks = <&mdss_dsi0_pll BYTECLK_MUX_0_CLK>,
+			<&mdss_dsi0_pll PCLK_MUX_0_CLK>;
+		clock-names = "src_byte_clk", "src_pixel_clk";
+
+		pinctrl-names = "panel_active", "panel_suspend";
+		pinctrl-0 = <&sdm845_gpio6_active &sdm845_gpio10_active>;
+		pinctrl-1 = <&sdm845_gpio6_sleep &sdm845_gpio10_sleep>;
+		qcom,platform-te-gpio = <&tlmm 10 0>;
+		qcom,platform-reset-gpio = <&tlmm 6 0>;
+
+		qcom,dsi-panel = <&dsi_nt36830_wqhd_dualdsi_cmd_extclk_30hz>;
+		wqhd-vddio-supply = <&pm8998_l14>;
+		lab-supply = <&lab_regulator>;
+		ibb-supply = <&ibb_regulator>;
+	};
+
+	mdss_dsi_nt36830_wqhd_dualdsi_video_extclk_30hz: qcom,dsi-display@32 {
+		compatible = "qcom,dsi-display";
+		label = "mdss_dsi_nt36830_wqhd_dualdsi_video_extclk_30hz";
+		qcom,display-type = "primary";
+
+		qcom,dsi-ctrl = <&mdss_dsi0 &mdss_dsi1>;
+		qcom,dsi-phy = <&mdss_dsi_phy0 &mdss_dsi_phy1>;
+		clocks = <&mdss_dsi0_pll BYTECLK_MUX_0_CLK>,
+			<&mdss_dsi0_pll PCLK_MUX_0_CLK>;
+		clock-names = "src_byte_clk", "src_pixel_clk";
+
+		pinctrl-names = "panel_active", "panel_suspend";
+		pinctrl-0 = <&sdm845_gpio6_active &sdm845_gpio10_active>;
+		pinctrl-1 = <&sdm845_gpio6_sleep &sdm845_gpio10_sleep>;
+		qcom,platform-reset-gpio = <&tlmm 6 0>;
+
+		qcom,dsi-panel = <&dsi_nt36830_wqhd_dualdsi_video_extclk_30hz>;
+		wqhd-vddio-supply = <&pm8998_l14>;
+		lab-supply = <&lab_regulator>;
+		ibb-supply = <&ibb_regulator>;
+	};
+
+	mdss_dsi_nt36830_wqhd_dualdsi_cmd_extclk_48hz: qcom,dsi-display@33 {
+		compatible = "qcom,dsi-display";
+		label = "mdss_dsi_nt36830_wqhd_dualdsi_cmd_extclk_48hz";
+		qcom,display-type = "primary";
+
+		qcom,dsi-ctrl = <&mdss_dsi0 &mdss_dsi1>;
+		qcom,dsi-phy = <&mdss_dsi_phy0 &mdss_dsi_phy1>;
+		clocks = <&mdss_dsi0_pll BYTECLK_MUX_0_CLK>,
+			<&mdss_dsi0_pll PCLK_MUX_0_CLK>;
+		clock-names = "src_byte_clk", "src_pixel_clk";
+
+		pinctrl-names = "panel_active", "panel_suspend";
+		pinctrl-0 = <&sdm845_gpio6_active &sdm845_gpio10_active>;
+		pinctrl-1 = <&sdm845_gpio6_sleep &sdm845_gpio10_sleep>;
+		qcom,platform-te-gpio = <&tlmm 10 0>;
+		qcom,platform-reset-gpio = <&tlmm 6 0>;
+
+		qcom,dsi-panel = <&dsi_nt36830_wqhd_dualdsi_cmd_extclk_48hz>;
+		wqhd-vddio-supply = <&pm8998_l14>;
+		lab-supply = <&lab_regulator>;
+		ibb-supply = <&ibb_regulator>;
+	};
+};
+
+&dsi_nt36830_wqhd_dualdsi_cmd {
+	qcom,panel-supply-entries = <&dsi_nt36830_panel_pwr_supply>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
+	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,platform-reset-gpio = <&tlmm 6 0>;
+	qcom,platform-te-gpio = <&tlmm 10 0>;
+	qcom,mdss-dsi-t-clk-post = <0x0b>;
+	qcom,mdss-dsi-t-clk-pre = <0x21>;
+	qcom,mdss-dsi-mode-sel-gpio-state = "dual_port";
+	qcom,mdss-dsi-display-timings {
+		timing@0{
+			qcom,mdss-dsi-panel-phy-timings = [00 13 05 04 1f 1e 05 05 03 03 04 00];
+			qcom,display-topology = <2 2 2>;
+			qcom,default-topology-index = <0>;
+		};
+		timing@1{
+			qcom,mdss-dsi-panel-phy-timings = [00 0d 03 03 1d 1c 04 03 01 03 04 00];
+			qcom,display-topology = <2 2 2>;
+			qcom,default-topology-index = <0>;
+		};
+	};
+};
+
+&dsi_nt36830_wqhd_dualdsi_video {
+	qcom,panel-supply-entries = <&dsi_nt36830_panel_pwr_supply>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
+	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,platform-reset-gpio = <&tlmm 6 0>;
+	qcom,platform-te-gpio = <&tlmm 10 0>;
+	qcom,mdss-dsi-t-clk-post = <0x05>;
+	qcom,mdss-dsi-t-clk-pre = <0x19>;
+	qcom,mdss-dsi-mode-sel-gpio-state = "dual_port";
+	qcom,mdss-dsi-display-timings {
+		timing@0{
+			qcom,mdss-dsi-panel-phy-timings = [00 0f 04 03 06 0b 04 04 03 03 04 00];
+			qcom,display-topology = <2 2 2>;
+			qcom,default-topology-index = <0>;
+		};
+	};
+};
+
+&dsi_nt36830_wqhd_dualdsi_cmd_30hz {
+	qcom,panel-supply-entries = <&dsi_nt36830_panel_pwr_supply>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
+	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,platform-reset-gpio = <&tlmm 6 0>;
+	qcom,platform-te-gpio = <&tlmm 10 0>;
+	qcom,mdss-dsi-t-clk-post = <0x0b>;
+	qcom,mdss-dsi-t-clk-pre = <0x21>;
+	qcom,mdss-dsi-mode-sel-gpio-state = "dual_port";
+	qcom,mdss-dsi-display-timings {
+		timing@0{
+			qcom,mdss-dsi-panel-phy-timings = [00 13 05 04 1f 1e 05 05 03 03 04 00];
+			qcom,display-topology = <2 2 2>;
+			qcom,default-topology-index = <0>;
+		};
+	};
+};
+
+&dsi_nt36830_wqhd_dualdsi_video_30hz {
+	qcom,panel-supply-entries = <&dsi_nt36830_panel_pwr_supply>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
+	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,platform-reset-gpio = <&tlmm 6 0>;
+	qcom,platform-te-gpio = <&tlmm 10 0>;
+	qcom,mdss-dsi-t-clk-post = <0x05>;
+	qcom,mdss-dsi-t-clk-pre = <0x19>;
+	qcom,mdss-dsi-mode-sel-gpio-state = "dual_port";
+	qcom,mdss-dsi-display-timings {
+		timing@0{
+			qcom,mdss-dsi-panel-phy-timings = [00 0f 04 03 06 0b 04 04 03 03 04 00];
+			qcom,display-topology = <2 2 2>;
+			qcom,default-topology-index = <0>;
+		};
+	};
+};
+
+&dsi_nt36830_wqhd_dualdsi_cmd_48hz {
+	qcom,panel-supply-entries = <&dsi_nt36830_panel_pwr_supply>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
+	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,platform-reset-gpio = <&tlmm 6 0>;
+	qcom,platform-te-gpio = <&tlmm 10 0>;
+	qcom,mdss-dsi-t-clk-post = <0x0b>;
+	qcom,mdss-dsi-t-clk-pre = <0x21>;
+	qcom,mdss-dsi-mode-sel-gpio-state = "dual_port";
+	qcom,mdss-dsi-display-timings {
+		timing@0{
+			qcom,mdss-dsi-panel-phy-timings = [00 13 05 04 1f 1e 05 05 03 03 04 00];
+			qcom,display-topology = <2 2 2>;
+			qcom,default-topology-index = <0>;
+		};
+	};
+};
+
+&dsi_nt36830_wqhd_dualdsi_extclk_cmd {
+	qcom,panel-supply-entries = <&dsi_nt36830_panel_pwr_supply>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
+	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,platform-reset-gpio = <&tlmm 6 0>;
+	qcom,platform-te-gpio = <&tlmm 10 0>;
+	qcom,mdss-dsi-t-clk-post = <0x0b>;
+	qcom,mdss-dsi-t-clk-pre = <0x21>;
+	qcom,mdss-dsi-mode-sel-gpio-state = "dual_port";
+	qcom,mdss-dsi-display-timings {
+		timing@0{
+			qcom,mdss-dsi-panel-phy-timings = [00 13 05 04 1f 1e 05 05 03 03 04 00];
+			qcom,display-topology = <2 2 2>;
+			qcom,default-topology-index = <0>;
+		};
+		timing@1{
+			qcom,mdss-dsi-panel-phy-timings = [00 0d 03 03 1d 1c 04 03 01 03 04 00];
+			qcom,display-topology = <2 2 2>;
+			qcom,default-topology-index = <0>;
+		};
+	};
+};
+
+&dsi_nt36830_wqhd_dualdsi_extclk_video {
+	qcom,panel-supply-entries = <&dsi_nt36830_panel_pwr_supply>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
+	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,platform-reset-gpio = <&tlmm 6 0>;
+	qcom,platform-te-gpio = <&tlmm 10 0>;
+	qcom,mdss-dsi-t-clk-post = <0x05>;
+	qcom,mdss-dsi-t-clk-pre = <0x19>;
+	qcom,mdss-dsi-mode-sel-gpio-state = "dual_port";
+	qcom,mdss-dsi-display-timings {
+		timing@0{
+			qcom,mdss-dsi-panel-phy-timings = [00 0f 04 03 06 0b 04 04 03 03 04 00];
+			qcom,display-topology = <2 2 2>;
+			qcom,default-topology-index = <0>;
+		};
+	};
+};
+
+&dsi_nt36830_wqhd_dualdsi_cmd_30hz {
+	qcom,panel-supply-entries = <&dsi_nt36830_panel_pwr_supply>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
+	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,platform-reset-gpio = <&tlmm 6 0>;
+	qcom,platform-te-gpio = <&tlmm 10 0>;
+	qcom,mdss-dsi-t-clk-post = <0x0b>;
+	qcom,mdss-dsi-t-clk-pre = <0x21>;
+	qcom,mdss-dsi-mode-sel-gpio-state = "dual_port";
+	qcom,mdss-dsi-display-timings {
+		timing@0{
+			qcom,mdss-dsi-panel-phy-timings = [00 13 05 04 1f 1e 05 05 03 03 04 00];
+			qcom,display-topology = <2 2 2>;
+			qcom,default-topology-index = <0>;
+		};
+	};
+};
+
+&dsi_nt36830_wqhd_dualdsi_video_extclk_30hz {
+	qcom,panel-supply-entries = <&dsi_nt36830_panel_pwr_supply>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
+	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,platform-reset-gpio = <&tlmm 6 0>;
+	qcom,platform-te-gpio = <&tlmm 10 0>;
+	qcom,mdss-dsi-t-clk-post = <0x05>;
+	qcom,mdss-dsi-t-clk-pre = <0x19>;
+	qcom,mdss-dsi-mode-sel-gpio-state = "dual_port";
+	qcom,mdss-dsi-display-timings {
+		timing@0{
+			qcom,mdss-dsi-panel-phy-timings = [00 0f 04 03 06 0b 04 04 03 03 04 00];
+			qcom,display-topology = <2 2 2>;
+			qcom,default-topology-index = <0>;
+		};
+	};
+};
+
+&dsi_nt36830_wqhd_dualdsi_cmd_extclk_48hz {
+	qcom,panel-supply-entries = <&dsi_nt36830_panel_pwr_supply>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
+	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,platform-reset-gpio = <&tlmm 6 0>;
+	qcom,platform-te-gpio = <&tlmm 10 0>;
+	qcom,mdss-dsi-t-clk-post = <0x0b>;
+	qcom,mdss-dsi-t-clk-pre = <0x21>;
+	qcom,mdss-dsi-mode-sel-gpio-state = "dual_port";
+	qcom,mdss-dsi-display-timings {
+		timing@0{
+			qcom,mdss-dsi-panel-phy-timings = [00 13 05 04 1f 1e 05 05 03 03 04 00];
+			qcom,display-topology = <2 2 2>;
+			qcom,default-topology-index = <0>;
+		};
+	};
+};
+
+/* Set cmd mode panel with the external clock as the active display */
+&mdss_dsi_nt36830_wqhd_dualdsi_extclk_cmd {
+	qcom,dsi-display-active;
+};
+
+&labibb {
+	status = "ok";
+	qcom,qpnp-labibb-mode = "lcd";
+};
+
+&pmi8998_wled {
+	status = "okay";
+	qcom,led-strings-list = [00 01 02 03];
+	qcom,fs-curr-ua = <20000>;
+	qcom,switch-freq-khz = <1600>;
+	qcom,en-cabc;
+};
+
+&dsi_sim_cmd {
+	qcom,mdss-dsi-display-timings{
+		timing@0{
+			qcom,mdss-dsi-panel-width = <1440>;
+			qcom,mdss-dsi-panel-height = <2560>;
+		};
+	};
+};
+
+

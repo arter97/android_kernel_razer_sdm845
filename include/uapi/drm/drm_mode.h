@@ -80,6 +80,10 @@ extern "C" {
 #define  DRM_MODE_FLAG_SUPPORTS_RGB		(1<<20)
 #define  DRM_MODE_FLAG_SUPPORTS_YUV		(1<<21)
 
+#define DRM_MODE_FLAG_DSC_BPC_MASK		(3<<22)
+#define  DRM_MODE_FLAG_DSC_BPC8			(1<<22)
+#define  DRM_MODE_FLAG_DSC_BPC10		(2<<22)
+
 /* DPMS flags */
 /* bit compatible with the xorg definitions. */
 #define DRM_MODE_DPMS_ON	0

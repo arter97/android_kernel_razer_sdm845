@@ -1,0 +1,79 @@
+&cam_cci {
+	lm3644_flashled: lm3644@63 {
+		compatible = "ti,lm3644";
+		reg = <0x63>;
+		status = "okay";
+
+		vdd-supply = <&pm8998_lvs1>;
+		regulator-names = "vdd";
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&sdm845_gpio16_default &sdm845_gpio22_default &sdm845_gpio37_default>;
+		gpio-hwen = <&tlmm 16 0>;
+		gpio-strobe = <&tlmm 22 0>;
+		gpio-torch = <&tlmm 37 0>;
+		torch-ramp-time-ms = <1>; //default
+		flash-timeout-ms = <1600>; //default
+		led-fault-detect = <1>; //default
+		qcom,cci-master = <0>;
+		boost-mode = <0>; //default
+		boost-freq = <0>; //default
+		boost-climit = <1>; //default
+
+		lm3644_flash0: flash0 {
+			id = <0>;
+			led-name = "flash0";
+			led-trigger = "flash0_trigger";
+			max-brightness = <1200>; //mA
+
+			qcom,default-led-trigger = "flash0_trigger"; //same as trigger
+			qcom,current-ma = <730>; //default
+			qcom,max-current = <1200>; //led limit
+			qcom,duration-ms = <1600>; //same as flash-timeout-ms
+		};
+
+		lm3644_flash1: flash1 {
+			id = <1>;
+			led-name = "flash1";
+			led-trigger = "flash1_trigger";
+			max-brightness = <1200>;
+
+			qcom,default-led-trigger = "flash1_trigger";
+			qcom,current-ma = <730>;
+			qcom,max-current = <1200>;
+			qcom,duration-ms = <1600>;
+		};
+
+		lm3644_torch0: torch0 {
+			id = <2>;
+			led-name = "torch0";
+			led-trigger = "torch0_trigger";
+			max-brightness = <360>; //mA
+
+			qcom,default-led-trigger = "torch0_trigger";
+			qcom,current-ma = <180>; //default
+			qcom,max-current = <360>; //chip limit
+		};
+
+		lm3644_torch1: torch1 {
+			id = <3>;
+			led-name = "torch1";
+			led-trigger = "torch1_trigger";
+			max-brightness = <360>;
+
+			qcom,default-led-trigger = "torch1_trigger";
+			qcom,current-ma = <180>;
+			qcom,max-current = <360>;
+		};
+
+		lm3644_switch0: switch0 {
+			id = <4>;
+			led-name = "switch0";
+			led-trigger = "switch0_trigger";
+			led-mask = <3>;
+			max-brightness = <1>;
+
+			qcom,default-led-trigger = "switch0_trigger";
+		};
+	};
+};

@@ -1,0 +1,344 @@
+&pm8998_gpios {
+	interrupts = <0x0 0xc0 0 IRQ_TYPE_NONE>,
+			<0x0 0xc1 0 IRQ_TYPE_NONE>,
+			<0x0 0xc3 0 IRQ_TYPE_NONE>,
+			<0x0 0xc4 0 IRQ_TYPE_NONE>,
+			<0x0 0xc5 0 IRQ_TYPE_NONE>,
+			<0x0 0xc6 0 IRQ_TYPE_NONE>,
+			<0x0 0xc7 0 IRQ_TYPE_NONE>,
+			<0x0 0xc8 0 IRQ_TYPE_NONE>,
+			<0x0 0xc9 0 IRQ_TYPE_NONE>,
+			<0x0 0xca 0 IRQ_TYPE_NONE>,
+			<0x0 0xcb 0 IRQ_TYPE_NONE>,
+			<0x0 0xcc 0 IRQ_TYPE_NONE>,
+			<0x0 0xcd 0 IRQ_TYPE_NONE>,
+			<0x0 0xce 0 IRQ_TYPE_NONE>,
+			<0x0 0xcf 0 IRQ_TYPE_NONE>,
+			<0x0 0xd0 0 IRQ_TYPE_NONE>,
+			<0x0 0xd1 0 IRQ_TYPE_NONE>,
+			<0x0 0xd2 0 IRQ_TYPE_NONE>,
+			<0x0 0xd4 0 IRQ_TYPE_NONE>,
+			<0x0 0xd6 0 IRQ_TYPE_NONE>;
+	interrupt-names = "pm8998_gpio1", "pm8998_gpio2",
+			"pm8998_gpio4", "pm8998_gpio5",
+			"pm8998_gpio6", "pm8998_gpio7",
+			"pm8998_gpio8", "pm8998_gpio9",
+			"pm8998_gpio10", "pm8998_gpio11",
+			"pm8998_gpio12", "pm8998_gpio13",
+			"pm8998_gpio14", "pm8998_gpio15",
+			"pm8998_gpio16", "pm8998_gpio17",
+			"pm8998_gpio18", "pm8998_gpio19",
+			"pm8998_gpio21", "pm8998_gpio23";
+	qcom,gpios-disallowed = <3 20 22 24 25 26>;
+
+	pm8998_gpio1 { /* UIM_BATT_ALARM */
+		pm8998_gpio1_default: pm8998_gpio1_default {
+			pins = "gpio1";
+			function = "func1";
+			input-enable;
+			bias-disable;
+			power-source = <0>;
+		};
+		pm8998_gpio1_sleep: pm8998_gpio1_sleep {
+			pins = "gpio1";
+			function = "normal";
+			input-enable;
+			bias-pull-down;
+			power-source = <0>;
+		};
+	};
+
+	pm8998_gpio2 { /* RCM_MARKER_1 */
+		pm8998_gpio2_default: pm8998_gpio2_default {
+			pins = "gpio2";
+			function = "normal";
+			output-low;
+			power-source = <0>;
+		};
+		pm8998_gpio2_sleep: pm8998_gpio2_sleep {
+			pins = "gpio2";
+			function = "normal";
+			output-low;
+			input-enable;
+			bias-pull-down;
+			power-source = <0>;
+		};
+	};
+
+	/*pm8998_gpio3 { // WLAN_SW_CTRL - disallow config
+	};*/
+
+	pm8998_gpio4 { /* CAM2_DVDD_EN */
+		pm8998_gpio4_default: pm8998_gpio4_default {
+			pins = "gpio4";
+			function = "normal";
+			output-low;
+			power-source = <0>;
+		};
+	};
+
+	pm8998_gpio5 { /* WUHB_INT */
+		pm8998_gpio5_default: pm8998_gpio5_default {
+			pins = "gpio5";
+			function = "normal";
+			input-enable;
+			bias-disable;
+			power-source = <0>;
+		};
+		pm8998_gpio5_sleep: pm8998_gpio5_sleep {
+			pins = "gpio5";
+			function = "normal";
+			input-enable;
+			bias-pull-down;
+			power-source = <0>;
+		};
+	};
+
+	pm8998_gpio6 { /* VOL_DOWN_N */
+		pm8998_gpio6_default: pm8998_gpio6_default {
+			pins = "gpio6";
+			function = "normal";
+			input-enable;
+			bias-pull-up;
+			power-source = <0>;
+		};
+	};
+
+	pm8998_gpio7 { /* CAM2_AVDD_EN */
+		pm8998_gpio7_default: pm8998_gpio7_default {
+			pins = "gpio7";
+			function = "normal";
+			output-low;
+			power-source = <0>;
+		};
+	};
+
+	pm8998_gpio8 { /* CAM2_IOVDD_EN */
+		pm8998_gpio8_default: pm8998_gpio8_default {
+			pins = "gpio8";
+			function = "normal";
+			output-low;
+			power-source = <0>;
+		};
+	};
+
+	pm8998_gpio9 { /* CAM0_VCM */
+		pm8998_gpio9_active: pm8998_gpio9_active {
+			pins = "gpio9";
+			function = "normal";
+			bias-disable;
+			power-source = <0>;
+		};
+
+		pm8998_gpio9_suspend: pm8998_gpio9_suspend {
+			pins = "gpio9";
+			function = "normal";
+			output-low;
+			bias-disable;
+			power-source = <0>;
+		};
+	};
+
+	pm8998_gpio10 { /* CAM2_AVDD_EN */
+		pm8998_gpio10_active: pm8998_gpio10_active {
+			pins = "gpio10";
+			function = "normal";
+			bias-disable;
+			power-source = <0>;
+		};
+
+		pm8998_gpio10_suspend: pm8998_gpio10_suspend {
+			pins = "gpio10";
+			function = "normal";
+			output-low;
+			bias-disable;
+			power-source = <0>;
+		};
+	};
+
+
+	pm8998_gpio11 { /* CAM2_DVDD_EN */
+		pm8998_gpio11_active: pm8998_gpio11_active {
+			pins = "gpio11";
+			function = "normal";
+			bias-disable;
+			power-source = <0>;
+		};
+
+		pm8998_gpio11_suspend: pm8998_gpio11_suspend {
+			pins = "gpio11";
+			function = "normal";
+			output-low;
+			bias-disable;
+			power-source = <0>;
+		};
+	};
+
+	pm8998_gpio12 {
+		pm8998_gpio12_active: pm8998_gpio12_active {
+			pins = "gpio12";
+			function = "normal";
+			bias-disable;
+			power-source = <0>;
+		};
+
+		pm8998_gpio12_suspend: pm8998_gpio12_suspend {
+			pins = "gpio12";
+			function = "normal";
+			output-low;
+			bias-disable;
+			power-source = <0>;
+		};
+	};
+
+	pm8998_gpio13 { /* CAM0_VAF */
+		pm8998_gpio13_active: pm8998_gpio13_active {
+			pins = "gpio13";
+			function = "normal";
+			bias-disable;
+			power-source = <0>;
+		};
+
+		pm8998_gpio13_suspend: pm8998_gpio13_suspend {
+			pins = "gpio13";
+			function = "normal";
+			output-low;
+			bias-disable;
+			power-source = <0>;
+		};
+	};
+
+	pm8998_gpio14 { /* DIV_CLK2 */
+		pm8998_gpio14_default: pm8998_gpio14_default {
+			pins = "gpio14";
+			function = "func2";
+			output-low;
+			power-source = <0>;
+		};
+		pm8998_gpio14_sleep: pm8998_gpio14_sleep {
+			pins = "gpio14";
+			function = "normal";
+			input-enable;
+			bias-pull-down;
+			power-source = <0>;
+		};
+	};
+
+	pm8998_gpio15 { /* SAMP_RESET */
+		pm8998_gpio15_default: pm8998_gpio15_default {
+			pins = "gpio15";
+			function = "normal";
+			output-high;
+			power-source = <0>;
+		};
+		pm8998_gpio15_sleep: pm8998_gpio15_sleep {
+			pins = "gpio15";
+			function = "normal";
+			input-enable;
+			bias-pull-down;
+			power-source = <0>;
+		};
+	};
+
+	pm8998_gpio16 {
+		pm8998_gpio16_active: pm8998_gpio16_active {
+			pins = "gpio16";
+			function = "normal";
+			bias-disable;
+			power-source = <0>;
+		};
+
+		pm8998_gpio16_suspend: pm8998_gpio16_suspend {
+			pins = "gpio16";
+			function = "normal";
+			output-low;
+			bias-disable;
+			power-source = <0>;
+		};
+	};
+
+	pm8998_gpio17 { /* REDRIVER_EN */
+		pm8998_gpio17_default: pm8998_gpio17_default {
+			pins = "gpio17";
+			function = "normal";
+			output-high;
+			power-source = <0>;
+		};
+		pm8998_gpio17_sleep: pm8998_gpio17_sleep {
+			pins = "gpio17";
+			function = "normal";
+			input-enable;
+			bias-pull-down;
+			power-source = <0>;
+		};
+	};
+
+	pm8998_gpio18 { /* SMB_STAT */
+		pm8998_gpio18_default: pm8998_gpio18_default {
+			pins = "gpio18";
+			function = "normal";
+			input-enable;
+			bias-pull-up;
+			power-source = <0>;
+		};
+	};
+
+	pm8998_gpio19 { /* 11AD_RFCLK3_EN */
+		pm8998_gpio19_default: pm8998_gpio19_default {
+			pins = "gpio19";
+			function = "normal";
+			input-enable;
+			bias-pull-down;
+			power-source = <1>;
+		};
+		pm8998_gpio19_sleep: pm8998_gpio19_sleep {
+			pins = "gpio19";
+			function = "normal";
+			input-enable;
+			bias-pull-down;
+			power-source = <1>;
+		};
+	};
+
+	/*pm8998_gpio20 { // WIPWR_RST_N - disallow config
+	};*/
+
+	pm8998_gpio21 { /* NFC_LNBBCLK3_EN */
+		pm8998_gpio21_default: pm8998_gpio21_default {
+			pins = "gpio21";
+			function = "normal";
+			input-enable;
+			bias-pull-down;
+			power-source = <1>;
+		};
+		pm8998_gpio21_sleep: pm8998_gpio21_sleep {
+			pins = "gpio21";
+			function = "normal";
+			input-enable;
+			bias-pull-down;
+			power-source = <1>;
+		};
+	};
+
+	/*pm8998_gpio22 { // PM845_OPTION_1 - disallow config
+	};*/
+
+	pm8998_gpio23 { /* WCSS_PWR_REQ */
+		pm8998_gpio23_default: pm8998_gpio23_default {
+			pins = "gpio23";
+			function = "normal";
+			input-enable;
+			bias-disable;
+			power-source = <1>;
+		};
+	};
+
+	/*pm8998_gpio24 { // PM845_GPIO24 - disallow config
+	};*/
+
+	/*pm8998_gpio25 { // PM845_OPTION_2 - disallow config
+	};*/
+
+	/*pm8998_gpio26 { // PM_SLB - disallow config
+	};*/
+};

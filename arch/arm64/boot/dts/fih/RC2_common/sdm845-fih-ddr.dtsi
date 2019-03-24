@@ -1,0 +1,8 @@
+&soc {
+	fih_ddr {
+		compatible = "fih_ddr";
+		status = "ok";
+		fih-ddr,draminfo = "UNKNOWN_ LPDDR4x 4096MB";
+		fih-ddr,dramtest = "none";
+	};
+};

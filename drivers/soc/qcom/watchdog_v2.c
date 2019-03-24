@@ -33,6 +33,10 @@
 #include <soc/qcom/watchdog.h>
 #include <linux/dma-mapping.h>
 
+#ifdef CONFIG_FIH_APR
+#include <fih/fih_rere.h>
+#endif
+
 #define MODULE_NAME "msm_watchdog"
 #define WDT0_ACCSCSSNBARK_INT 0
 #define TCSR_WDT_CFG	0x30
@@ -517,6 +521,11 @@ static irqreturn_t wdog_bark_handler(int irq, void *dev_id)
 	struct msm_watchdog_data *wdog_dd = (struct msm_watchdog_data *)dev_id;
 	unsigned long nanosec_rem;
 	unsigned long long t = sched_clock();
+
+	#ifdef CONFIG_FIH_APR
+	pr_err("FIH_APR: KERNEL_WDOG\n");
+	qpnp_pon_set_restart_reason(FIH_RERE_KERNEL_WDOG);
+	#endif
 
 	nanosec_rem = do_div(t, 1000000000);
 	dev_info(wdog_dd->dev, "Watchdog bark! Now = %lu.%06lu\n",

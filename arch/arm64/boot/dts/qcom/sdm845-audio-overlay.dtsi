@@ -63,7 +63,7 @@
 	pinctrl-0 = <&wcd_usbc_analog_en2_active>;
 	pinctrl-1 = <&wcd_usbc_analog_en2_idle>;
 
-	qcom,wsa-max-devs = <2>;
+	qcom,wsa-max-devs = <0>;
 	qcom,wsa-devs = <&wsa881x_0211>, <&wsa881x_0212>,
 			<&wsa881x_0213>, <&wsa881x_0214>;
 	qcom,wsa-aux-dev-prefix = "SpkrLeft", "SpkrRight",

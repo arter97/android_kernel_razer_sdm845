@@ -26,6 +26,9 @@
 #include <linux/qpnp/qpnp-misc.h>
 #include "fg-core.h"
 #include "fg-reg.h"
+#if defined(CONFIG_FIH_BATTERY)
+#include "fih-battery-bbs.h"
+#endif /* CONFIG_FIH_BATTERY */
 
 #define FG_GEN3_DEV_NAME	"qcom,fg-gen3"
 
@@ -170,6 +173,7 @@ static void fg_encode_current(struct fg_sram_param *sp,
 	enum fg_sram_param_id id, int val_ma, u8 *buf);
 static void fg_encode_default(struct fg_sram_param *sp,
 	enum fg_sram_param_id id, int val, u8 *buf);
+static const char *fg_get_cycle_count(struct fg_chip *chip);
 
 static struct fg_irq_info fg_irqs[FG_IRQ_MAX];
 
@@ -1019,6 +1023,10 @@ static int fg_get_batt_profile(struct fg_chip *chip)
 		return -ENXIO;
 	}
 
+#if defined(CONFIG_FIH_BATTERY) && defined(BBS_LOG)
+	BBS_BATTERY_ID(chip->batt_id_ohms);
+#endif /* CONFIG_FIH_BATTERY */
+
 	profile_node = of_batterydata_get_best_profile(batt_node,
 				chip->batt_id_ohms / 1000, NULL);
 	if (IS_ERR(profile_node))
@@ -1026,6 +1034,9 @@ static int fg_get_batt_profile(struct fg_chip *chip)
 
 	if (!profile_node) {
 		pr_err("couldn't find profile handle\n");
+#if defined(CONFIG_FIH_BATTERY) && defined(BBS_LOG)
+		BBS_BATTERY_ID_MISS();
+#endif /* CONFIG_FIH_BATTERY */
 		return -ENODATA;
 	}
 
@@ -1397,6 +1408,13 @@ static int fg_load_learned_cap_from_sram(struct fg_chip *chip)
 
 	fg_dbg(chip, FG_CAP_LEARN, "learned_cc_uah:%lld nom_cap_uah: %lld\n",
 		chip->cl.learned_cc_uah, chip->cl.nom_cap_uah);
+#if defined(CONFIG_FIH_BATTERY) && defined(BBS_LOG)
+	BBS_BATTERY_FCC_MAX(div64_s64(chip->cl.nom_cap_uah, 1000));
+	if (div64_s64(chip->cl.learned_cc_uah * 100, chip->cl.nom_cap_uah) < 70) {
+		BBS_BATTERY_AGING();
+		//BBS_BATTERY_FCC(fg_get_cycle_count(chip), div64_s64(chip->cl.learned_cc_uah, 1000));
+	}
+#endif /* CONFIG_FIH_BATTERY */
 	return 0;
 }
 
@@ -2773,6 +2791,22 @@ static const char *fg_get_cycle_count(struct fg_chip *chip)
 	return buf;
 }
 
+static int fg_get_cycle_count_avg(struct fg_chip *chip)
+{
+	int i, temp = 0;
+
+	if (!chip->cyc_ctr.en)
+		return 0;
+
+	mutex_lock(&chip->cyc_ctr.lock);
+	for (i = 0; i < BUCKET_COUNT; i++) {
+		temp += chip->cyc_ctr.count[i];
+	}
+	mutex_unlock(&chip->cyc_ctr.lock);
+
+	return temp / BUCKET_COUNT;
+}
+
 #define ESR_SW_FCC_UA				100000	/* 100mA */
 #define ESR_EXTRACTION_ENABLE_MASK		BIT(0)
 static void fg_esr_sw_work(struct work_struct *work)
@@ -3194,6 +3228,9 @@ wait:
 			BATT_SOC_RESTART(chip), rc);
 		goto out;
 	}
+#if defined(CONFIG_FIH_BATTERY) && defined(BBS_LOG)
+	BBS_FG_RESET();
+#endif /* CONFIG_FIH_BATTERY */
 out:
 	chip->fg_restarting = false;
 	return rc;
@@ -3215,7 +3252,7 @@ static void profile_load_work(struct work_struct *work)
 				struct fg_chip,
 				profile_load_work.work);
 	u8 buf[2], val;
-	int rc;
+	int rc, msoc = -1, volt_uv = -1, batt_temp = -1;
 
 	vote(chip->awake_votable, PROFILE_LOAD, true, 0);
 
@@ -3310,6 +3347,7 @@ done:
 		chip->profile_loaded = true;
 
 	fg_dbg(chip, FG_STATUS, "profile loaded successfully");
+	pr_info("profile loaded successfully\n");
 out:
 	chip->soc_reporting_ready = true;
 	vote(chip->awake_votable, ESR_FCC_VOTER, true, 0);
@@ -3319,6 +3357,16 @@ out:
 		fg_stay_awake(chip, FG_STATUS_NOTIFY_WAKE);
 		schedule_work(&chip->status_change_work);
 	}
+
+	rc = fg_get_battery_voltage(chip, &volt_uv);
+	if (!rc)
+		rc = fg_get_prop_capacity(chip, &msoc);
+
+	if (!rc)
+		rc = fg_get_battery_temp(chip, &batt_temp);
+	pr_info("Battery SOC:%d voltage: %duV temp: %d id: %dKOhms\n",
+				msoc, volt_uv, batt_temp, chip->batt_id_ohms / 1000);
+
 }
 
 static void sram_dump_work(struct work_struct *work)
@@ -4037,6 +4085,9 @@ static int fg_psy_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_VOLTAGE_MAX_DESIGN:
 		pval->intval = chip->bp.float_volt_uv;
 		break;
+	case POWER_SUPPLY_PROP_CYCLE_COUNT:
+		pval->intval = fg_get_cycle_count_avg(chip);
+		break;
 	case POWER_SUPPLY_PROP_CYCLE_COUNTS:
 		pval->strval = fg_get_cycle_count(chip);
 		break;
@@ -4273,6 +4324,7 @@ static enum power_supply_property fg_psy_props[] = {
 	POWER_SUPPLY_PROP_BATTERY_TYPE,
 	POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN,
 	POWER_SUPPLY_PROP_VOLTAGE_MAX_DESIGN,
+	POWER_SUPPLY_PROP_CYCLE_COUNT,
 	POWER_SUPPLY_PROP_CYCLE_COUNTS,
 	POWER_SUPPLY_PROP_CHARGE_NOW_RAW,
 	POWER_SUPPLY_PROP_CHARGE_NOW,
@@ -4697,6 +4749,9 @@ static irqreturn_t fg_vbatt_low_irq_handler(int irq, void *data)
 	struct fg_chip *chip = data;
 
 	fg_dbg(chip, FG_IRQ, "irq %d triggered\n", irq);
+#if defined(CONFIG_FIH_BATTERY) && defined(BBS_LOG)
+	BBS_BATTERY_VOLTAGE_LOW();
+#endif /* CONFIG_FIH_BATTERY */
 	return IRQ_HANDLED;
 }
 
@@ -4782,6 +4837,10 @@ static irqreturn_t fg_delta_batt_temp_irq_handler(int irq, void *data)
 
 		chip->last_batt_temp = batt_temp;
 		power_supply_changed(chip->batt_psy);
+#if defined(CONFIG_FIH_BATTERY) && defined(BBS_LOG)
+		if (batt_temp >= 600)
+			BBS_BATTERY_REACH_SHUTDOWN_TEMPERATURE();
+#endif /* CONFIG_FIH_BATTERY */
 	}
 
 	if (abs(chip->last_batt_temp - batt_temp) > 30)

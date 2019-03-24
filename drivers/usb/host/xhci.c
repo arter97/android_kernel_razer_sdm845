@@ -82,6 +82,7 @@ int xhci_handshake_check_state(struct xhci_hcd *xhci,
 		void __iomem *ptr, u32 mask, u32 done, int usec)
 {
 	u32	result;
+	unsigned long timeout = jiffies + usecs_to_jiffies(usec);
 
 	do {
 		result = readl_relaxed(ptr);
@@ -93,7 +94,7 @@ int xhci_handshake_check_state(struct xhci_hcd *xhci,
 			return 0;
 		udelay(1);
 		usec--;
-	} while (usec > 0);
+	} while ((usec > 0) && time_before(jiffies, timeout));
 	return -ETIMEDOUT;
 }
 
@@ -1065,8 +1066,13 @@ int xhci_resume(struct xhci_hcd *xhci, bool hibernated)
 		command = readl(&xhci->op_regs->command);
 		command |= CMD_CRS;
 		writel(command, &xhci->op_regs->command);
+		/*
+		 * Some controllers take up to 55+ ms to complete the controller
+		 * restore so setting the timeout to 100ms. Xhci specification
+		 * doesn't mention any timeout value.
+		 */
 		if (xhci_handshake(&xhci->op_regs->status,
-			      STS_RESTORE, 0, 10 * 1000)) {
+			      STS_RESTORE, 0, 100 * 1000)) {
 			xhci_warn(xhci, "WARN: xHC restore state timeout\n");
 			spin_unlock_irq(&xhci->lock);
 			return -ETIMEDOUT;
@@ -1429,6 +1435,8 @@ int xhci_urb_enqueue(struct usb_hcd *hcd, struct urb *urb, gfp_t mem_flags)
 	urb_priv->td_cnt = 0;
 	urb->hcpriv = urb_priv;
 
+	trace_xhci_urb_enqueue(urb);
+
 	if (usb_endpoint_xfer_control(&urb->ep->desc)) {
 		/* Check to see if the max packet size for the default control
 		 * endpoint changed during FS device enumeration
@@ -1555,14 +1563,24 @@ int xhci_urb_dequeue(struct usb_hcd *hcd, struct urb *urb, int status)
 
 	xhci = hcd_to_xhci(hcd);
 	spin_lock_irqsave(&xhci->lock, flags);
+
+	trace_xhci_urb_dequeue(urb);
+
 	/* Make sure the URB hasn't completed or been unlinked already */
 	ret = usb_hcd_check_unlink_urb(hcd, urb, status);
 	if (ret || !urb->hcpriv)
 		goto done;
+
+	/* If xHC is dead take it down and return ALL URBs in xhci_hc_died() */
 	temp = readl(&xhci->op_regs->status);
-	if (temp == 0xffffffff || (xhci->xhc_state & XHCI_STATE_HALTED)) {
+	if (temp == ~(u32)0 || xhci->xhc_state & XHCI_STATE_DYING) {
+		xhci_hc_died(xhci);
+		goto done;
+	}
+
+	if (xhci->xhc_state & XHCI_STATE_HALTED) {
 		xhci_dbg_trace(xhci, trace_xhci_dbg_cancel_urb,
-				"HW died, freeing TD.");
+				"HC halted, freeing TD manually.");
 		urb_priv = urb->hcpriv;
 		for (i = urb_priv->td_cnt;
 		     i < urb_priv->length && xhci->devs[urb->dev->slot_id];
@@ -1609,14 +1627,13 @@ int xhci_urb_dequeue(struct usb_hcd *hcd, struct urb *urb, int status)
 	/* Queue a stop endpoint command, but only if this is
 	 * the first cancellation to be handled.
 	 */
-	if (!(ep->ep_state & EP_HALT_PENDING)) {
+	if (!(ep->ep_state & EP_STOP_CMD_PENDING)) {
 		command = xhci_alloc_command(xhci, false, false, GFP_ATOMIC);
 		if (!command) {
 			ret = -ENOMEM;
 			goto done;
 		}
-		ep->ep_state |= EP_HALT_PENDING;
-		ep->stop_cmds_pending++;
+		ep->ep_state |= EP_STOP_CMD_PENDING;
 		ep->stop_cmd_timer.expires = jiffies +
 			XHCI_STOP_EP_CMD_TIMEOUT * HZ;
 		add_timer(&ep->stop_cmd_timer);
@@ -2662,6 +2679,12 @@ static int xhci_configure_endpoint(struct xhci_hcd *xhci,
 		return -EINVAL;
 
 	spin_lock_irqsave(&xhci->lock, flags);
+
+	if (xhci->xhc_state & XHCI_STATE_DYING) {
+		spin_unlock_irqrestore(&xhci->lock, flags);
+		return -ESHUTDOWN;
+	}
+
 	virt_dev = xhci->devs[udev->slot_id];
 
 	ctrl_ctx = xhci_get_input_control_ctx(command->in_ctx);
@@ -3657,7 +3680,7 @@ void xhci_free_dev(struct usb_hcd *hcd, struct usb_device *udev)
 
 	/* Stop any wayward timer functions (which may grab the lock) */
 	for (i = 0; i < 31; ++i) {
-		virt_dev->eps[i].ep_state &= ~EP_HALT_PENDING;
+		virt_dev->eps[i].ep_state &= ~EP_STOP_CMD_PENDING;
 		del_timer_sync(&virt_dev->eps[i].stop_cmd_timer);
 	}
 

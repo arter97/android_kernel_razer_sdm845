@@ -1,0 +1,11 @@
+&qupv3_se2_i2c {
+  status = "ok";
+  tusb544@12 {
+    compatible = "ti,tusb544";
+    reg = <0x12>;
+    fih,redriver-en = <&tlmm 29 0>;
+    fih,hpd-gpio = <&tlmm 39 0>;
+    //extcon = <&pmi8998_pdphy>;
+    //qcom,dp-usbpd-detection = <&pmi8998_pdphy>;
+	};
+};

@@ -1,0 +1,10 @@
+&soc {
+	fih_mfd {
+		compatible = "fih_mfd";
+		status = "ok";
+		fih-mfd,pid = "FIH0000000000000";
+		fih-mfd,bt_mac = "000000000000";
+		fih-mfd,wifi_mac = "000000000000";
+		fih-mfd,wifi_mac2 = "000000000000";
+	};
+};

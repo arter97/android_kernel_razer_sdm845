@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2010 Nokia Corporation
  * Copyright (C) 2012 Texas Instruments
+ * Copyright (C) 2018 Razer Inc.
  *
  * Contact: Samu Onkalo <samu.p.onkalo@nokia.com>
  *          Milo(Woogyom) Kim <milo.kim@ti.com>
@@ -65,6 +66,11 @@
 #define LP5523_REG_PROG_PAGE_SEL	0x4F
 #define LP5523_REG_PROG_MEM		0x50
 
+/* Add defines for custom programs */
+#define LP5523_REG_PROG_MEM_END		0x6F
+#define LP5523_PAGE_SIZE		LP5523_PROGRAM_LENGTH
+#define LP5523_NUM_PAGES		6
+
 /* Bit description in registers */
 #define LP5523_ENABLE			0x40
 #define LP5523_AUTO_INC			0x40
@@ -120,6 +126,13 @@ enum lp5523_chip_id {
 	LP5523,
 	LP55231,
 };
+
+enum power_state {
+	POWER_DISABLE,
+	POWER_ENABLE,
+};
+
+struct lp55xx_chip *g_chip;
 
 static int lp5523_init_program_engine(struct lp55xx_chip *chip);
 
@@ -318,7 +331,9 @@ static int lp5523_init_program_engine(struct lp55xx_chip *chip)
 
 	/* Let the programs run for couple of ms and check the engine status */
 	usleep_range(3000, 6000);
-	lp55xx_read(chip, LP5523_REG_STATUS, &status);
+	ret = lp55xx_read(chip, LP5523_REG_STATUS, &status);
+	if (ret)
+		return ret;
 	status &= LP5523_ENG_STATUS_MASK;
 
 	if (status != LP5523_ENG_STATUS_MASK) {
@@ -671,6 +686,262 @@ release_lock:
 	return pos;
 }
 
+static ssize_t lp5523_rwtest(struct device *dev,
+			       struct device_attribute *attr,
+			       char *buf)
+{
+	struct lp55xx_led *led = i2c_get_clientdata(to_i2c_client(dev));
+	struct lp55xx_chip *chip = led->chip;
+	struct lp55xx_device_config *cfg = chip->cfg;
+	int ret, pos = 0;
+	u8 addr = cfg->enable.addr;
+	u8 val  = cfg->enable.val;
+
+	mutex_lock(&chip->lock);
+
+	ret = lp55xx_write(chip, addr, val);
+	if (ret)
+		goto fail;
+
+	usleep_range(1000, 2000);
+
+	ret = lp55xx_read(chip, addr, &val);
+	if (ret)
+		goto fail;
+
+	if (val != cfg->enable.val)
+		pos += sprintf(buf + pos, "TEST FAIL\n");
+
+	if (pos == 0)
+		pos = sprintf(buf, "OK\n");
+	goto release_lock;
+
+fail:
+	pos = sprintf(buf, "FAIL\n");
+
+release_lock:
+	mutex_unlock(&chip->lock);
+
+	return pos;
+}
+
+static ssize_t read_memory(struct device *dev,
+			       struct device_attribute *attr,
+			       char *buf)
+{
+	struct lp55xx_led *led = i2c_get_clientdata(to_i2c_client(dev));
+	struct lp55xx_chip *chip = led->chip;
+	int i;
+	int j;
+	int len = 0;
+	int ret;
+	u8 inst;
+	u8 pages[LP5523_NUM_PAGES][LP5523_PAGE_SIZE] = {{0}};
+
+	mutex_lock(&chip->lock);
+
+	lp55xx_write(chip, LP5523_REG_OP_MODE, 0x00); // Disable all engines
+	lp5523_wait_opmode_done();
+	lp55xx_write(chip, LP5523_REG_OP_MODE, 0x15); // Sets all engines to load
+	lp5523_wait_opmode_done();
+
+	// Memory is stored in 6 pages of 32 bytes
+	// Each instruction is 16 bits, so there are 16 instructions per page
+	// We need to select the page we want to read with REG 0x4F so we can
+	// read a page out with registers 0x50-0x6F.
+	for (i = 0; i < LP5523_NUM_PAGES; i++) {
+		// select page
+		lp55xx_write(chip, LP5523_REG_PROG_PAGE_SEL, i);
+
+		for (j = 0; j < LP5523_PAGE_SIZE; j++) {
+			ret = lp55xx_read(chip, LP5523_REG_PROG_MEM + j, &inst);
+			if (ret)
+				goto err;
+			pages[i][j] = inst;
+		}
+	}
+	mutex_unlock(&chip->lock);
+
+	len = sprintf(buf, "Memory\n");
+	for (i = 0; i < LP5523_NUM_PAGES; i++) {
+		len += sprintf(&buf[len], "%.2x", pages[i][0]);
+		for (j = 1; j < LP5523_PAGE_SIZE; j++) {
+			len += sprintf(&buf[len], " %.2x", pages[i][j]);
+		}
+		len += sprintf(&buf[len], "\n");
+	}
+	return len;
+
+err:
+	mutex_unlock(&chip->lock);
+	return sprintf(buf, "error reading memory");
+}
+
+static ssize_t store_memory(struct device *dev,
+                     struct device_attribute *attr,
+                     const char *buf, size_t len)
+{
+	struct lp55xx_led *led = i2c_get_clientdata(to_i2c_client(dev));
+	struct lp55xx_chip *chip = led->chip;
+	u8 pattern[LP5523_PROGRAM_LENGTH * LP5523_PAGE_SIZE] = {0};
+	unsigned cmd;
+	char c[3];
+	int nrchars;
+	int ret;
+	int offset = 0;
+	int i = 0;
+	int p;
+
+	mutex_lock(&chip->lock);
+
+	lp55xx_write(chip, LP5523_REG_OP_MODE, 0x00); // Disable all engines
+	lp5523_wait_opmode_done();
+	lp55xx_write(chip, LP5523_REG_OP_MODE, 0x15); // Sets all engines to load
+	lp5523_wait_opmode_done();
+
+	// Stole most of this from lp5523_update_program_memory
+	while ((offset < len - 1) && (i < LP5523_PROGRAM_LENGTH * LP5523_PAGE_SIZE)) {
+		/* separate sscanfs because length is working only for %s */
+		ret = sscanf(buf + offset, "%2s%n ", c, &nrchars);
+		if (ret != 1)
+			goto err;
+
+		ret = sscanf(c, "%2x", &cmd);
+		if (ret != 1)
+			goto err;
+
+		pattern[i] = (u8)cmd;
+		offset += nrchars;
+		i++;
+	}
+
+	/* Each instruction is 16bit long. Check that length is even */
+	if (i % 2)
+		goto err;
+
+	// Memory is stored in 6 pages of 32 bytes
+	// Each instruction is 16 bits, so there are 16 instructions per page
+	// We need to select the page we want to write to with REG 0x4F so we can
+	// write a page out with registers 0x50-0x6F.
+	for (p = 0; p < LP5523_NUM_PAGES; p++) {
+		// select page
+		lp55xx_write(chip, LP5523_REG_PROG_PAGE_SEL, p);
+
+		for (i = 0; i < LP5523_PROGRAM_LENGTH; i++) {
+			ret = lp55xx_write(chip,
+					LP5523_REG_PROG_MEM + i,
+					pattern[p * LP5523_PROGRAM_LENGTH + i]);
+			if (ret)
+			{
+				dev_err(&chip->cl->dev, "couldn't write program");
+				goto err;
+			}
+		}
+	}
+	mutex_unlock(&chip->lock);
+	return len;
+
+err:
+	mutex_unlock(&chip->lock);
+	dev_err(&chip->cl->dev, "wrong pattern format\n");
+	return -EINVAL;
+}
+
+#define store_prog_start(nr)                          \
+static ssize_t store_program_##nr##_start(struct device *dev,  \
+		                     struct device_attribute *attr, \
+							 const char *buf, size_t len)   \
+{                                    						\
+	    return store_program_start(dev, attr, buf, len, nr);  \
+}
+static ssize_t store_program_start(struct device *dev,
+                 struct device_attribute *attr,
+                 const char *buf, size_t len, int nr)
+{
+	struct lp55xx_led *led = i2c_get_clientdata(to_i2c_client(dev));
+	struct lp55xx_chip *chip = led->chip;
+	unsigned val;
+	int ret;
+
+	ret = sscanf(buf, "%2x", &val);
+	if (ret != 1)
+	{
+		dev_err(&chip->cl->dev, "error reading program addr");
+		return -EINVAL;
+	}
+
+	mutex_lock(&chip->lock);
+	lp55xx_write(chip, LP5523_REG_CH1_PROG_START + nr - 1, (u8)val);
+	mutex_unlock(&chip->lock);
+	return len;
+}
+store_prog_start(1)
+store_prog_start(2)
+store_prog_start(3)
+
+static ssize_t store_led_control(struct device *dev,
+				     struct device_attribute *attr,
+				     const char *buf, size_t len)
+{
+	struct lp55xx_led *led = i2c_get_clientdata(to_i2c_client(dev));
+	struct lp55xx_chip *chip = led->chip;
+
+	char junk;
+	unsigned value[LP5523_MAX_LEDS];
+	int res, i;
+
+	res = sscanf(buf, "%d %d %d %d %d %d %d %d %d %c", &value[0], &value[1], &value[2], &value[3], &value[4], &value[5], &value[6], &value[7], &value[8], &junk);
+
+	mutex_lock(&chip->lock);
+
+	for (i = 0; i < LP5523_MAX_LEDS; i++) {
+		lp55xx_write(chip, LP5523_REG_LED_PWM_BASE + i, value[i]);
+		lp55xx_write(chip, LP5523_REG_LED_CURRENT_BASE + i, 255);
+	}
+
+	// set output on off control bit
+	res = lp55xx_write(chip, LP5523_REG_ENABLE_LEDS_LSB, 0xff);
+	res = lp55xx_write(chip, LP5523_REG_ENABLE_LEDS_MSB, 0x01);
+	mutex_unlock(&chip->lock);
+	return len;
+}
+
+bool WriteLed_DriverRegister(u8 idx, u8 *buf, u8 count)
+{
+	int res = 0, i;
+
+	mutex_lock(&g_chip->lock);
+
+	for (i = 0 ; i < count; i++)
+	{
+		res = lp55xx_write(g_chip, idx + i, buf[i]);
+		if (res < 0) goto leave;
+	}
+
+leave:
+	mutex_unlock(&g_chip->lock);
+	return (res < 0) ? false : true;
+}
+EXPORT_SYMBOL_GPL(WriteLed_DriverRegister);
+
+bool ReadLed_DriverRegister(u8 idx, u8 *buf, u8 count)
+{
+	int res = 0, i;
+
+	mutex_lock(&g_chip->lock);
+
+	for (i = 0 ; i < count; i++)
+	{
+		res = lp55xx_read(g_chip, idx + i, &buf[i]);
+		if (res < 0) goto leave;
+	}
+
+leave:
+	mutex_unlock(&g_chip->lock);
+	return (res < 0) ? false : true;
+}
+EXPORT_SYMBOL_GPL(ReadLed_DriverRegister);
+
 #define show_fader(nr)						\
 static ssize_t show_master_fader##nr(struct device *dev,	\
 			    struct device_attribute *attr,	\
@@ -814,6 +1085,61 @@ static int lp5523_led_brightness(struct lp55xx_led *led)
 	return ret;
 }
 
+static ssize_t show_force_suspend(struct device *dev,
+			    struct device_attribute *attr,
+			    char *buf)
+{
+	struct lp55xx_led *led = i2c_get_clientdata(to_i2c_client(dev));
+	struct lp55xx_chip *chip = led->chip;
+
+	return scnprintf(buf, PAGE_SIZE, "%d\n", chip->force_suspended);
+}
+
+static ssize_t store_force_suspend(struct device *dev,
+				       struct device_attribute *attr,
+				       const char *buf, size_t len)
+{
+	struct lp55xx_led *led = i2c_get_clientdata(to_i2c_client(dev));
+	struct lp55xx_chip *chip = led->chip;
+	int val, ret;
+
+	ret = sscanf(buf, "%d", &val);
+	if (ret != 1) {
+		dev_err(&chip->cl->dev, "force_suspend: Failed to sscanf!");
+                return -EINVAL;
+	}
+
+	/* Bounds check */
+	if (val != 0 && val != 1) {
+		dev_err(&chip->cl->dev, "force_suspend: Failed the bounds check!");
+		return -EINVAL;
+	}
+
+	mutex_lock(&chip->lock);
+
+	if (val == chip->force_suspended) {
+		dev_warn(&chip->cl->dev, "force_suspend: Requested mode already applied.");
+		goto end;
+	}
+
+	if (val) {
+		/* Force suspend chip */
+		lp55xx_deinit_device(chip);
+		chip->force_suspended = 1;
+		dev_info(&chip->cl->dev, "force_suspend: Chip was suspended.");
+	} else {
+		/* Resume chip */
+		lp55xx_init_device(chip);
+		chip->force_suspended = 0;
+		dev_info(&chip->cl->dev, "force_suspend: Chip was resumed.");
+	}
+
+end:
+	mutex_unlock(&chip->lock);
+
+	return len;
+}
+
 static LP55XX_DEV_ATTR_RW(engine1_mode, show_engine1_mode, store_engine1_mode);
 static LP55XX_DEV_ATTR_RW(engine2_mode, show_engine2_mode, store_engine2_mode);
 static LP55XX_DEV_ATTR_RW(engine3_mode, show_engine3_mode, store_engine3_mode);
@@ -824,6 +1150,12 @@ static LP55XX_DEV_ATTR_WO(engine1_load, store_engine1_load);
 static LP55XX_DEV_ATTR_WO(engine2_load, store_engine2_load);
 static LP55XX_DEV_ATTR_WO(engine3_load, store_engine3_load);
 static LP55XX_DEV_ATTR_RO(selftest, lp5523_selftest);
+static LP55XX_DEV_ATTR_RO(rwtest, lp5523_rwtest);
+static LP55XX_DEV_ATTR_RW(memory, read_memory, store_memory);
+static LP55XX_DEV_ATTR_WO(prog_1_start, store_program_1_start);
+static LP55XX_DEV_ATTR_WO(prog_2_start, store_program_2_start);
+static LP55XX_DEV_ATTR_WO(prog_3_start, store_program_3_start);
+static LP55XX_DEV_ATTR_WO(led_control, store_led_control);
 static LP55XX_DEV_ATTR_RW(master_fader1, show_master_fader1,
 			  store_master_fader1);
 static LP55XX_DEV_ATTR_RW(master_fader2, show_master_fader2,
@@ -832,6 +1164,8 @@ static LP55XX_DEV_ATTR_RW(master_fader3, show_master_fader3,
 			  store_master_fader3);
 static LP55XX_DEV_ATTR_RW(master_fader_leds, show_master_fader_leds,
 			  store_master_fader_leds);
+static LP55XX_DEV_ATTR_RW(force_suspend, show_force_suspend,
+			  store_force_suspend);
 
 static struct attribute *lp5523_attributes[] = {
 	&dev_attr_engine1_mode.attr,
@@ -843,11 +1177,18 @@ static struct attribute *lp5523_attributes[] = {
 	&dev_attr_engine1_leds.attr,
 	&dev_attr_engine2_leds.attr,
 	&dev_attr_engine3_leds.attr,
+	&dev_attr_memory.attr,
+	&dev_attr_prog_1_start.attr,
+	&dev_attr_prog_2_start.attr,
+	&dev_attr_prog_3_start.attr,
 	&dev_attr_selftest.attr,
+	&dev_attr_rwtest.attr,
+	&dev_attr_led_control.attr,
 	&dev_attr_master_fader1.attr,
 	&dev_attr_master_fader2.attr,
 	&dev_attr_master_fader3.attr,
 	&dev_attr_master_fader_leds.attr,
+	&dev_attr_force_suspend.attr,
 	NULL,
 };
 
@@ -905,11 +1246,16 @@ static int lp5523_probe(struct i2c_client *client,
 
 	chip->cl = client;
 	chip->pdata = pdata;
+	chip->led_patterns = 0;
 	chip->cfg = &lp5523_cfg;
+	g_chip = chip;
 
 	mutex_init(&chip->lock);
 
 	i2c_set_clientdata(client, led);
+	ret = lp55xx_io_request(chip);
+	if (ret)
+		goto err_init;
 
 	ret = lp55xx_init_device(chip);
 	if (ret)

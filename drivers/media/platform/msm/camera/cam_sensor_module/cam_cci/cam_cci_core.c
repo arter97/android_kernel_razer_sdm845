@@ -1250,7 +1250,7 @@ static int32_t cam_cci_read(struct v4l2_subdev *sd,
 		CCI_I2C_M0_READ_BUF_LEVEL_ADDR + master * 0x100);
 	exp_words = ((read_cfg->num_byte / 4) + 1);
 	if (read_words != exp_words) {
-		CAM_ERR(CAM_CCI, "read_words = %d, exp words = %d",
+		CAM_ERR(CAM_CCI, "sid: 0x%x read_words = %d, exp words = %d", c_ctrl->cci_info->sid,
 			read_words, exp_words);
 		memset(read_cfg->data, 0, read_cfg->num_byte);
 		rc = -EINVAL;

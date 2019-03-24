@@ -1,4 +1,6 @@
 /* Copyright (c) 2016-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2018 Razer Inc.
+ * Copyright (c) 2018 Paranoid Android.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -170,6 +172,9 @@ struct smb_dt_props {
 	bool	hvdcp_disable;
 	bool	auto_recharge_soc;
 	int	wd_bark_time;
+#if defined(CONFIG_FIH_BATTERY)
+	int	input_priority;
+#endif /* CONFIG_FIH_BATTERY */
 };
 
 struct smb2 {
@@ -198,6 +203,18 @@ module_param_named(
 	audio_headset_drp_wait_ms, __audio_headset_drp_wait_ms, int, 0600
 );
 
+#if defined(CONFIG_FIH_BATTERY)
+static int __info_update_ms;
+module_param_named(
+	info_update_ms, __info_update_ms, int, 0600
+);
+
+static int __reg_dump_mask;
+module_param_named(
+	reg_dump_mask, __reg_dump_mask, int, 0600
+);
+#endif /* CONFIG_FIH_BATTERY */
+
 #define MICRO_1P5A		1500000
 #define MICRO_P1A		100000
 #define OTG_DEFAULT_DEGLITCH_TIME_MS	50
@@ -206,6 +223,258 @@ module_param_named(
 #define BITE_WDOG_TIMEOUT_8S		0x3
 #define BARK_WDOG_TIMEOUT_MASK		GENMASK(3, 2)
 #define BARK_WDOG_TIMEOUT_SHIFT		2
+/*  - Create a node to on/off otg */
+static struct smb2 *mChip = NULL;
+char fih_otg_disable_mode = 0; // add for OTG FREQ
+static ssize_t fih_otg_show(struct device *dev,
+			       struct device_attribute *attr, char *buf)
+{
+	pr_info("fih_otg_show = %d\n", fih_otg_disable_mode);
+	return sprintf(buf, "%d\n", fih_otg_disable_mode);
+}
+
+static ssize_t fih_otg_store(struct device *dev,
+		struct device_attribute *attr, const char
+		*buf, size_t size)
+{
+	struct smb_charger *chg = &mChip->chg;
+	int intval =0;
+	int rc;
+	u8 stat;
+	int reg_enabled = -1;
+
+	sscanf(buf, "%d", &intval);
+
+	if(intval !=0 && intval !=1){
+		pr_info("%s:Invalid argument:%s\n", __func__, buf);
+		return -EINVAL;
+	}
+	fih_otg_disable_mode = intval;
+
+	reg_enabled = smblib_vbus_regulator_is_enabled(chg->vbus_vreg->rdev);
+	if(reg_enabled != 0 && reg_enabled != 1){
+		pr_err("%s:Can't get regulator status:%d\n", __func__, reg_enabled);
+		goto end;
+	}
+
+	if(intval == 1){
+		if(reg_enabled){
+			pr_info("%s:Disable otg\n", __func__);
+			smblib_vbus_regulator_disable(chg->vbus_vreg->rdev);
+		}
+		else{
+			pr_info("%s:Disable otg, but otg isn't enabled\n", __func__);
+		}
+	}
+	else{
+		rc = smblib_read(chg, TYPE_C_STATUS_2_REG, &stat);
+		if(rc < 0){
+			pr_err("%s:Couldn't read TYPE_C_STATUS_2 rc=%d\n", __func__, rc);
+			stat = 0;
+		}
+
+		if((stat & DFP_TYPEC_MASK) == DFP_RD_OPEN_BIT &&
+			(stat & EXIT_UFP_MODE_BIT) &&
+			!reg_enabled)
+		{
+			pr_info("%s:Enable otg\n", __func__);
+			smblib_vbus_regulator_enable(chg->vbus_vreg->rdev);
+		}
+		else{
+			pr_info("%s:Enable otg, but otg is not attached\n", __func__);
+		}
+	}
+
+end:
+	return size;
+}
+
+static DEVICE_ATTR(fih_otg_fun, 0644, fih_otg_show, fih_otg_store);
+/* end FIH */
+
+static void razer_charge_limit_disable_charge(struct smb_charger *chg, bool disable) {
+	int rc;
+
+	/* If current vote status equals the request, we don't need to do anything */
+	if (disable == chg->razer_charge_limit_active)
+		return;
+
+	/* Place or remove vote for usb icl */
+	rc = vote(chg->usb_icl_votable, RAZER_LIMIT_VOTER, disable, 0);
+	if (rc < 0)
+		goto error;
+
+	/* Place or remove vote for dc suspend */
+	rc = vote(chg->dc_suspend_votable, RAZER_LIMIT_VOTER, disable, 0);
+	if (rc < 0)
+		goto error;
+
+	/* Place or remove vote for sending a hardware signal to disable charging */
+	rc = vote(chg->chg_disable_votable, RAZER_LIMIT_VOTER, disable, 0);
+	if (rc < 0)
+		goto error;
+
+	/* If everything went fine, update the variable */
+	chg->razer_charge_limit_active = disable;
+
+	/* Notify batt_psy about this change */
+	power_supply_changed(chg->batt_psy);
+
+	pr_info("%s: Successfully %s charging.",
+		__func__, disable ? "disabled" : "enabled");
+
+	/* Return to avoid error path */
+	return;
+
+error:
+	pr_err("%s: Vote to %s charging as part of charge limit failed! rc=%d\n",
+		__func__, disable ? "disable" : "enable", rc);
+}
+
+void razer_charge_limit_update(struct smb_charger *chg) {
+	union power_supply_propval cur_pct = {0, };
+	int rc;
+
+	mutex_lock(&chg->razer_charge_limit_lock);
+
+	/* Remove votes if disabled or not connected */
+	if (!chg->razer_charge_limit_enable || chg->typec_mode == POWER_SUPPLY_TYPEC_NONE) {
+		razer_charge_limit_disable_charge(chg, false);
+		goto end;
+	}
+
+	/* Dropdown capacity cannot be higher than or identical to max limit capacity */
+	if (chg->razer_charge_limit_dropdown >= chg->razer_charge_limit_max) {
+		pr_err("%s: Charging limit configuration is not sane, disabling it.", __func__);
+		chg->razer_charge_limit_enable = false;
+		razer_charge_limit_disable_charge(chg, false);
+		goto end;
+	}
+
+	rc = smblib_get_prop_batt_capacity(chg, &cur_pct);
+	if (rc < 0) {
+		pr_err("%s: Failed to get battery capacity, aborting. rc=%d", __func__, rc);
+		goto end;
+	}
+
+	if (cur_pct.intval >= chg->razer_charge_limit_max) {
+		/* Disable charging if the current capacity is at max limit or higher */
+		razer_charge_limit_disable_charge(chg, true);
+	} else if (cur_pct.intval <= chg->razer_charge_limit_dropdown) {
+		/* Enable charging if we are at dropdown capacity or lower */
+		razer_charge_limit_disable_charge(chg, false);
+	}
+
+end:
+	mutex_unlock(&chg->razer_charge_limit_lock);
+}
+
+static ssize_t razer_charge_limit_enable_show(struct device *dev,
+			       struct device_attribute *attr, char *buf)
+{
+	struct smb_charger *chg = &mChip->chg;
+
+	return snprintf(buf, PAGE_SIZE, "%d\n", chg->razer_charge_limit_enable);
+}
+
+static ssize_t razer_charge_limit_enable_store(struct device *dev,
+		struct device_attribute *attr, const char *buf,
+		size_t size)
+{
+	struct smb_charger *chg = &mChip->chg;
+	int intval;
+
+	if (sscanf(buf, "%d", &intval) < 1) {
+		pr_err("%s: sscanf failed to parse buffer.\n", __func__);
+		return -EINVAL;
+	}
+
+	if (intval != 0 && intval != 1) {
+		pr_err("%s: Invalid argument: %s\n", __func__, buf);
+		return -EINVAL;
+	}
+	chg->razer_charge_limit_enable = intval;
+
+	/* Update charge limit state for the new data */
+	razer_charge_limit_update(chg);
+
+	return size;
+}
+static DEVICE_ATTR(razer_charge_limit_enable, S_IRUGO | S_IWUSR,
+	razer_charge_limit_enable_show, razer_charge_limit_enable_store);
+
+static ssize_t razer_charge_limit_max_show(struct device *dev,
+			       struct device_attribute *attr, char *buf)
+{
+	struct smb_charger *chg = &mChip->chg;
+
+	return snprintf(buf, PAGE_SIZE, "%d\n", chg->razer_charge_limit_max);
+}
+
+#define RAZER_CHARGE_LIMIT_MAX_UPPER 99
+#define RAZER_CHARGE_LIMIT_MAX_LOWER 2
+static ssize_t razer_charge_limit_max_store(struct device *dev,
+		struct device_attribute *attr, const char *buf,
+		size_t size)
+{
+	struct smb_charger *chg = &mChip->chg;
+	int intval;
+
+	if (sscanf(buf, "%d", &intval) < 1) {
+		pr_err("%s: sscanf failed to parse buffer.\n", __func__);
+		return -EINVAL;
+	}
+
+	if (intval < RAZER_CHARGE_LIMIT_MAX_LOWER || intval > RAZER_CHARGE_LIMIT_MAX_UPPER) {
+		pr_err("%s: Invalid argument: %s\n", __func__, buf);
+		return -EINVAL;
+	}
+	chg->razer_charge_limit_max = intval;
+
+	/* Update charge limit state for the new data */
+	razer_charge_limit_update(chg);
+
+	return size;
+}
+static DEVICE_ATTR(razer_charge_limit_max, S_IRUGO | S_IWUSR,
+	razer_charge_limit_max_show, razer_charge_limit_max_store);
+
+static ssize_t razer_charge_limit_dropdown_show(struct device *dev,
+			       struct device_attribute *attr, char *buf)
+{
+	struct smb_charger *chg = &mChip->chg;
+
+	return snprintf(buf, PAGE_SIZE, "%d\n", chg->razer_charge_limit_dropdown);
+}
+
+#define RAZER_CHARGE_LIMIT_DROPDOWN_UPPER 98
+#define RAZER_CHARGE_LIMIT_DROPDOWN_LOWER 1
+static ssize_t razer_charge_limit_dropdown_store(struct device *dev,
+		struct device_attribute *attr, const char *buf,
+		size_t size)
+{
+	struct smb_charger *chg = &mChip->chg;
+	int intval;
+
+	if (sscanf(buf, "%d", &intval) < 1) {
+		pr_err("%s: sscanf failed to parse buffer.\n", __func__);
+		return -EINVAL;
+	}
+
+	if (intval < RAZER_CHARGE_LIMIT_DROPDOWN_LOWER || intval > RAZER_CHARGE_LIMIT_DROPDOWN_UPPER) {
+		pr_err("%s: Invalid argument: %s\n", __func__, buf);
+		return -EINVAL;
+	}
+	chg->razer_charge_limit_dropdown = intval;
+
+	/* Update charge limit state for the new data */
+	razer_charge_limit_update(chg);
+
+	return size;
+}
+static DEVICE_ATTR(razer_charge_limit_dropdown, S_IRUGO | S_IWUSR,
+	razer_charge_limit_dropdown_show, razer_charge_limit_dropdown_store);
+
 static int smb2_parse_dt(struct smb2 *chip)
 {
 	struct smb_charger *chg = &chip->chg;
@@ -337,6 +606,18 @@ static int smb2_parse_dt(struct smb2 *chip)
 	chg->fcc_stepper_enable = of_property_read_bool(node,
 					"qcom,fcc-stepping-enable");
 
+#if defined(CONFIG_FIH_BATTERY)
+	rc = of_property_read_u32(node, "fih,info-update-ms", chg->info_update_ms);
+
+	rc = of_property_read_u32(node, "fih,input-priority", &chip->dt.input_priority);
+	if (rc < 0 || (chip->dt.input_priority < 0 || chip->dt.input_priority > 1))
+		chip->dt.input_priority = -EINVAL;
+
+	chg->charging_check_en = of_property_read_bool(node, "fih,charging-check-enable");
+
+	chg->forecast_charging_en = of_property_read_bool(node, "fih,forecast-charging-enable");
+#endif /* CONFIG_FIH_BATTERY */
+
 	return 0;
 }
 
@@ -371,6 +652,9 @@ static enum power_supply_property smb2_usb_props[] = {
 	POWER_SUPPLY_PROP_SDP_CURRENT_MAX,
 	POWER_SUPPLY_PROP_CONNECTOR_TYPE,
 	POWER_SUPPLY_PROP_MOISTURE_DETECTED,
+#if defined(CONFIG_FIH_BATTERY)
+	POWER_SUPPLY_PROP_INPUT_CURRENT_LIMIT,
+#endif /* CONFIG_FIH_BATTERY */
 };
 
 static int smb2_usb_get_prop(struct power_supply *psy,
@@ -496,6 +780,11 @@ static int smb2_usb_get_prop(struct power_supply *psy,
 		val->intval = get_client_vote(chg->disable_power_role_switch,
 					      MOISTURE_VOTER);
 		break;
+#if defined(CONFIG_FIH_BATTERY)
+	case POWER_SUPPLY_PROP_INPUT_CURRENT_LIMIT:
+		rc = smblib_get_icl_current_override(chg, &val->intval);
+		break;
+#endif /* CONFIG_FIH_BATTERY */
 	default:
 		pr_err("get prop %d is not supported in usb\n", psp);
 		rc = -EINVAL;
@@ -566,6 +855,11 @@ static int smb2_usb_set_prop(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_SDP_CURRENT_MAX:
 		rc = smblib_set_prop_sdp_current_max(chg, val);
 		break;
+#if defined(CONFIG_FIH_BATTERY)
+	case POWER_SUPPLY_PROP_INPUT_CURRENT_LIMIT:
+		rc = smblib_set_icl_current_override(chg, val->intval);
+		break;
+#endif /* CONFIG_FIH_BATTERY */
 	default:
 		pr_err("set prop %d is not supported\n", psp);
 		rc = -EINVAL;
@@ -582,6 +876,9 @@ static int smb2_usb_prop_is_writeable(struct power_supply *psy,
 {
 	switch (psp) {
 	case POWER_SUPPLY_PROP_CTM_CURRENT_MAX:
+#if defined(CONFIG_FIH_BATTERY)
+	case POWER_SUPPLY_PROP_INPUT_CURRENT_LIMIT:
+#endif /* CONFIG_FIH_BATTERY */
 		return 1;
 	default:
 		break;
@@ -1245,6 +1542,7 @@ static int smb2_batt_prop_is_writeable(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_STEP_CHARGING_ENABLED:
 	case POWER_SUPPLY_PROP_SW_JEITA_ENABLED:
 	case POWER_SUPPLY_PROP_DIE_HEALTH:
+	case POWER_SUPPLY_PROP_CHARGE_CONTROL_LIMIT:
 		return 1;
 	default:
 		break;
@@ -1637,11 +1935,25 @@ static int smb2_init_hw(struct smb2 *chip)
 	 */
 	rc = smblib_masked_write(chg, USBIN_AICL_OPTIONS_CFG_REG,
 			USBIN_AICL_START_AT_MAX_BIT
+				/*
+				 * Fixed [RC2-257] DUT auto discharging after charging 4 mins.
+				 * Not to suspend USBIN on collapse to ICL_MIN (25mA)
+				 */
+				| SUSPEND_ON_COLLAPSE_USBIN_BIT
 				| USBIN_AICL_ADC_EN_BIT, 0);
 	if (rc < 0) {
-		dev_err(chg->dev, "Couldn't configure AICL rc=%d\n", rc);
+		dev_err(chg->dev, "Couldn't configure USBIN_AICL rc=%d\n", rc);
 		return rc;
 	}
+
+	//{DCIN_AICL disable
+	rc = smblib_masked_write(chg, DCIN_AICL_OPTIONS_CFG_REG,
+			DCIN_AICL_EN_BIT, 0);
+	if (rc < 0) {
+		dev_err(chg->dev, "Couldn't configure DCIN_AICL rc=%d\n", rc);
+		return rc;
+	}
+	//}DCIN_AICL disable
 
 	/* Configure charge enable for software control; active high */
 	rc = smblib_masked_write(chg, CHGR_CFG2_REG,
@@ -1789,6 +2101,11 @@ static int smb2_init_hw(struct smb2 *chip)
 		return rc;
 	}
 
+	rc = smblib_masked_write(chg, USBIN_OPTIONS_2_CFG_REG, 0x20, 0);
+	if (rc < 0)
+		dev_err(chg->dev, "Couldn't configure dcd timeout option rc=%d\n",
+			rc);
+
 	rc = smblib_read(chg, USBIN_OPTIONS_2_CFG_REG, &chg->float_cfg);
 	if (rc < 0) {
 		dev_err(chg->dev, "Couldn't read float charger options rc=%d\n",
@@ -1869,6 +2186,27 @@ static int smb2_init_hw(struct smb2 *chip)
 			return rc;
 		}
 	}
+
+#if defined(CONFIG_FIH_BATTERY)
+	/* Configure input priority */
+	switch (chip->dt.input_priority) {
+	case 0:
+		rc = smblib_masked_write(chg, USBIN_OPTIONS_1_CFG_REG,
+				INPUT_PRIORITY_BIT, 0);
+		break;
+	case 1:
+		rc = smblib_masked_write(chg, USBIN_OPTIONS_1_CFG_REG,
+				INPUT_PRIORITY_BIT, INPUT_PRIORITY_BIT);
+		break;
+	default:
+		rc = 0;
+		break;
+	}
+	if (rc < 0) {
+		dev_err(chg->dev, "Couldn't configure input priority rc=%d\n", rc);
+		return rc;
+	}
+#endif /* CONFIG_FIH_BATTERY */
 
 	return rc;
 }
@@ -2358,6 +2696,10 @@ static int smb2_probe(struct platform_device *pdev)
 	chg->die_health = -EINVAL;
 	chg->name = "PMI";
 	chg->audio_headset_drp_wait_ms = &__audio_headset_drp_wait_ms;
+#if defined(CONFIG_FIH_BATTERY)
+	chg->info_update_ms = &__info_update_ms;
+	chg->reg_dump_mask = &__reg_dump_mask;
+#endif /* CONFIG_FIH_BATTERY */
 
 	chg->regmap = dev_get_regmap(chg->dev->parent, NULL);
 	if (!chg->regmap) {
@@ -2507,6 +2849,14 @@ static int smb2_probe(struct platform_device *pdev)
 	pr_info("QPNP SMB2 probed successfully usb:present=%d type=%d batt:present = %d health = %d charge = %d\n",
 		usb_present, chg->real_charger_type,
 		batt_present, batt_health, batt_charge_type);
+	/*  - Create a node to on/off otg */
+	device_create_file(&pdev->dev, &dev_attr_fih_otg_fun); // add for FREQ
+	mChip = chip;
+
+	device_create_file(&pdev->dev, &dev_attr_razer_charge_limit_enable);
+	device_create_file(&pdev->dev, &dev_attr_razer_charge_limit_max);
+	device_create_file(&pdev->dev, &dev_attr_razer_charge_limit_dropdown);
+
 	return rc;
 
 cleanup:

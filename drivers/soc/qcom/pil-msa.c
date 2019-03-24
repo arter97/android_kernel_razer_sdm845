@@ -32,6 +32,10 @@
 #include "pil-q6v5.h"
 #include "pil-msa.h"
 
+#ifdef CONFIG_FIH_NV
+#include <fih/fih_mem.h>
+#endif
+
 /* Q6 Register Offsets */
 #define QDSP6SS_RST_EVB			0x010
 #define QDSP6SS_DBG_CFG			0x018
@@ -656,6 +660,10 @@ err_power:
 	return ret;
 }
 
+#ifdef CONFIG_FIH_NV
+static bool fih_nv_assigned = false;
+#endif
+
 int pil_mss_reset_load_mba(struct pil_desc *pil)
 {
 	struct q6v5_data *drv = container_of(pil, struct q6v5_data, desc);
@@ -670,6 +678,27 @@ int pil_mss_reset_load_mba(struct pil_desc *pil)
 	int ret;
 	const u8 *data;
 	struct device *dma_dev = md->mba_mem_dev_fixed ?: &md->mba_mem_dev;
+
+	#ifdef CONFIG_FIH_NV
+	pr_notice("%s: %s\n", __func__, pil->name);
+	if (!(strncmp(pil->name, "modem", sizeof(char)*5)))
+	{
+		if (!fih_nv_assigned) {
+			pr_notice("%s: Assign %s memory 0x%08x 0x%08x (initial)\n",
+				__func__, pil->name, FIH_MEM_NV_MDM_ADDR, FIH_MEM_NV_MDM_SIZE);
+			ret = pil_assign_mem_to_subsys_and_linux(pil, FIH_MEM_NV_MDM_ADDR, FIH_MEM_NV_MDM_SIZE);
+			if (ret) {
+				pr_err("Failed to assign %s memory, ret = %d\n", pil->name, ret);
+				fih_nv_assigned = false;
+				return ret;
+			}
+			fih_nv_assigned = true;
+		} else {
+			pr_notice("%s: Assign %s memory 0x%08x 0x%08x (re-init)\n",
+				__func__, pil->name, FIH_MEM_NV_MDM_ADDR, FIH_MEM_NV_MDM_SIZE);
+		}
+	}
+	#endif
 
 	trace_pil_func(__func__);
 	if (drv->mba_dp_virt && md->mba_mem_dev_fixed)

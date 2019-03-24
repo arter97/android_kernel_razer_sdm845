@@ -383,6 +383,77 @@ use_internal_clk:
 }
 EXPORT_SYMBOL_GPL(lp55xx_is_extclk_used);
 
+int lp55xx_io_request(struct lp55xx_chip *chip)
+{
+	struct lp55xx_platform_data *pdata;
+	struct device *dev = &chip->cl->dev;
+	int ret = 0;
+
+	WARN_ON(!chip);
+
+	pdata = chip->pdata;
+
+	if (!pdata)
+		return -EINVAL;
+
+	if (gpio_is_valid(pdata->ldo_en_gpio)) {
+		ret = devm_gpio_request_one(dev, pdata->ldo_en_gpio,
+					    GPIOF_DIR_OUT, "lp5523_ldo_en");
+		if (ret < 0) {
+			dev_err(dev, "could not acquire enable gpio (err=%d)\n",
+				ret);
+			goto err;
+		}
+	}
+
+	if (gpio_is_valid(pdata->enable_gpio)) {
+		ret = devm_gpio_request_one(dev, pdata->enable_gpio,
+					    GPIOF_DIR_OUT, "lp5523_enable");
+		if (ret < 0) {
+			dev_err(dev, "could not acquire enable gpio (err=%d)\n",
+				ret);
+			goto err;
+		}
+	}
+
+err:
+	return ret;
+}
+EXPORT_SYMBOL_GPL(lp55xx_io_request);
+
+int lp55xx_power_request(struct lp55xx_chip *chip, bool on)
+{
+	struct lp55xx_platform_data *pdata;
+	int ret = 0;
+
+	WARN_ON(!chip);
+
+	pdata = chip->pdata;
+
+	if (!pdata)
+		return -EINVAL;
+
+	if (on) {
+		if (gpio_is_valid(pdata->ldo_en_gpio))
+			gpio_set_value(pdata->ldo_en_gpio, 1);
+
+		if (gpio_is_valid(pdata->enable_gpio)) {
+			gpio_set_value(pdata->enable_gpio, 0);
+			usleep_range(1000, 2000); /* Keep enable down at least 1ms */
+			gpio_set_value(pdata->enable_gpio, 1);
+			usleep_range(1000, 2000); /* 500us abs min. */
+		}
+	} else {
+		if (gpio_is_valid(pdata->ldo_en_gpio))
+			gpio_set_value(pdata->ldo_en_gpio, 0);
+
+		if (gpio_is_valid(pdata->enable_gpio))
+			gpio_set_value(pdata->enable_gpio, 0);
+	}
+
+	return ret;
+}
+
 int lp55xx_init_device(struct lp55xx_chip *chip)
 {
 	struct lp55xx_platform_data *pdata;
@@ -398,20 +469,8 @@ int lp55xx_init_device(struct lp55xx_chip *chip)
 	if (!pdata || !cfg)
 		return -EINVAL;
 
-	if (gpio_is_valid(pdata->enable_gpio)) {
-		ret = devm_gpio_request_one(dev, pdata->enable_gpio,
-					    GPIOF_DIR_OUT, "lp5523_enable");
-		if (ret < 0) {
-			dev_err(dev, "could not acquire enable gpio (err=%d)\n",
-				ret);
-			goto err;
-		}
-
-		gpio_set_value(pdata->enable_gpio, 0);
-		usleep_range(1000, 2000); /* Keep enable down at least 1ms */
-		gpio_set_value(pdata->enable_gpio, 1);
-		usleep_range(1000, 2000); /* 500us abs min. */
-	}
+	// please make sure you have called lp55xx_io_request
+	lp55xx_power_request(chip, true);
 
 	lp55xx_reset_device(chip);
 
@@ -445,13 +504,10 @@ EXPORT_SYMBOL_GPL(lp55xx_init_device);
 
 void lp55xx_deinit_device(struct lp55xx_chip *chip)
 {
-	struct lp55xx_platform_data *pdata = chip->pdata;
-
 	if (chip->clk)
 		clk_disable_unprepare(chip->clk);
 
-	if (gpio_is_valid(pdata->enable_gpio))
-		gpio_set_value(pdata->enable_gpio, 0);
+	lp55xx_power_request(chip, false);
 }
 EXPORT_SYMBOL_GPL(lp55xx_deinit_device);
 
@@ -583,6 +639,7 @@ struct lp55xx_platform_data *lp55xx_of_populate_pdata(struct device *dev,
 	of_property_read_u8(np, "clock-mode", &pdata->clock_mode);
 
 	pdata->enable_gpio = of_get_named_gpio(np, "enable-gpio", 0);
+	pdata->ldo_en_gpio = of_get_named_gpio(np, "ldo-en-gpio", 0);
 
 	/* LP8501 specific */
 	of_property_read_u8(np, "pwr-sel", (u8 *)&pdata->pwr_sel);

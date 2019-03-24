@@ -1,0 +1,83 @@
+
+qcom,3413486_fih_cheryl2_3900mah_averaged_masterslave_may15th2018 {
+	qcom, = <24>;
+	/* #3413486_FIH_Cheryl2_3900mAh_averaged_MasterSlave_May15th2018*/
+	qcom,max-voltage-uv = <4400000>;
+	qcom,nom-batt-capacity-mah = <4000>;
+	qcom,fastchg-current-ma = <3900>;
+	qcom,batt-id-kohm = <240>;
+	qcom,battery-beta = <4085>;
+	qcom,fg-cc-cv-threshold-mv = <4390>;
+	qcom,battery-type = "3413486_fih_cheryl2_3900mah_averaged_masterslave_may15th2018";
+	qcom,soc-based-step-chg;
+	qcom,step-chg-ranges = <0	50	3900000
+				51	100	1900000>;
+	fih,step-chg-hysteresis = <0>;
+	qcom,jeita-fcc-ranges = <0	109	750000
+				 110	209	1150000
+				 210	459	3900000
+				 460	549	1900000>;
+	qcom,jeita-fv-ranges = <0	459	4400000
+				460	550	4200000>;
+	fih,jeita-hysteresis = <9>;
+	qcom,checksum = <0x5E8E>;
+	qcom,gui-version = "PMI8998GUI - 2.0.0.58";
+	qcom,fg-profile-data = [
+		 98 1F C0 05
+		 3A 0A AC 06
+		 FE 1C 8B 01
+		 10 05 78 03
+		 D1 17 C1 23
+		 8D 44 29 5A
+		 83 00 00 00
+		 11 00 00 00
+		 00 00 61 CD
+		 E1 C5 86 CA
+		 1B 00 08 00
+		 D0 DB 0C E4
+		 CB F4 7A 00
+		 7F 03 7A 13
+		 48 E5 A2 2B
+		 1B 06 09 20
+		 27 00 14 00
+		 73 1F 01 FC
+		 18 0A B9 06
+		 CE 1C E2 02
+		 17 0C 26 12
+		 8D 18 D5 23
+		 E7 4D 2F 5B
+		 68 00 00 00
+		 0E 00 00 00
+		 00 00 12 CD
+		 B7 C3 FB BC
+		 18 00 00 00
+		 01 EB 0C E4
+		 71 F5 06 EB
+		 E9 EA 1F 0A
+		 41 02 3F 1B
+		 BD 33 CC FF
+		 07 10 00 00
+		 C9 0F 66 46
+		 18 00 40 00
+		 4B 01 0A FA
+		 FF 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+	];
+};

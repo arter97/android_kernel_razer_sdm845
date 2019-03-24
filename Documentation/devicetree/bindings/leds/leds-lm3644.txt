@@ -1,0 +1,93 @@
+lm3644 led-controller provides a way to control two flash led path.
+
+Required properties:
+- compatible		: Should be "ti,lm3644".
+- reg			: i2c slave addres, must be "0x63".
+
+Optional properties:
+- pinctrl-names		: Should be "default".
+- pinctrl-0		: Pinctrl node with default initial setting.
+- gpio-hwen		: Gpio number for "HWEN" pin, should be tunr on before use driver control method.
+- gpio-strobe		: Gpio number for "STROBE" pin, if defined, driver would change to gpio control for turn on/off led
+- gpio-torch		: Gpio number for "TORCH" pin, if defined, driver would change to gpio control for turn on/off led
+- gpio-tx		: Gpio number for "TX" pin, but NOT-SUPPORT now.
+- torch-ramp-time-ms	: Torch rampup time in ms, defaul: 1ms.
+				(Valid: 0, 1, 32, 64, 128, 256, 512, 1024)
+- flash-timeout-ms	: Flash auto timeout threshold in ms, default: 150ms/600ms for TT.
+				(Valid: 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 150, 200, 250, 300, 350, 400)
+				(Valid for TT: 40, 80, 120, 160, 200, 240, 280, 320, 360, 400, 600, 800, 1000, 1200, 1400, 1600)
+- torch-override	: Boolean value, means LED1 torch brightness would be overrided with LED2's.
+- flash-override	: Boolean value, means LED1 flash brightness would be overrided with LED2's.
+- enable-ntc		: Boolean value, enable ntc feature, but NOT-SUPPORT now.
+- boost-mode		: Boost mode, default: normal, valid: 0->normal, 1->pass mode only.
+- boost-freq		: Boost freqency, default: 2Mz, valid: 0->2MHz, 1->4MHz.
+- boost-climit		: Bosst current limitation, default: 2.8A, valid: 0->1.9A, 1->2.8A.
+- led-fault-detect	: Detect LED pin short fault, default: enable, valid: 0->disable, 1->enable.
+
+Child Node for led device:
+Requried properties:
+- id			: the led number of this chip, valid: 0~4, can't duplicate.
+- led-mask		: led controlled bit mask (LED1 is bit0, LED2 is bit1), only switch node need this property.
+
+Optional properties:
+- max_brightness	: the max current for the specific led (Torch:180/360(TT), Flash:1500).
+- led-name		: led device name, default: "flash0", "flash1", "torch0", "torch1", "switch0" (map to id number)
+- led-trigger		: led trigger name, default is same as led-name.
+
+Other properties:
+- qcom,default-led-trigger: Seems like related to qcom camera, but not useful now.
+- qcom,current-ma: Seems like related to qcom camera, but not useful now.
+- qcom,max-current: Seems like related to qcom camera, but not useful now.
+- qcom,duration-ms: Seems like related to qcom camera, but not useful now.
+
+Example:
+	lm3644@63 {
+		compatible = "ti,lm3644";
+		reg = <0x63>;
+		status = "okay";
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&sdm845_gpio16_default &sdm845_gpio22_default &sdm845_gpio3_default>;
+		gpio-hwen = <&tlmm 16 0>;
+		gpio-strobe = <&tlmm 22 0>;
+		gpio-torch = <&tlmm 3 0>;
+		torch-ramp-time-ms = <1>; //default
+		flash-timeout-ms = <600>; //default
+		led-fault-detect = <1>; //default
+		boost-mode = <0>; //default
+		boost-freq = <0>; //default
+		boost-climit = <1>; //default
+
+		lm3644_flash0: flash0 {
+			id = <0>;
+			led-name = "flash0";
+			led-trigger = "flash0_trigger";
+			max-brightness = <1200>; //mA
+
+			qcom,default-led-trigger = "flash0_trigger"; //same as trigger
+			qcom,current-ma = <730>; //default
+			qcom,max-current = <1200>; //led limit
+			qcom,duration-ms = <600>; //same as flash-timeout-ms
+		};
+
+		lm3644_torch0: torch0 {
+			id = <2>;
+			led-name = "torch0";
+			led-trigger = "torch0_trigger";
+			max-brightness = <360>; //mA
+
+			qcom,default-led-trigger = "torch0_trigger";
+			qcom,current-ma = <180>; //default
+			qcom,max-current = <360>; //chip limit
+		};
+
+		lm3644_switch0: switch0 {
+			id = <4>;
+			led-name = "switch0";
+			led-trigger = "switch0_trigger";
+			led-mask = <3>;
+			max-brightness = <1>;
+
+			qcom,default-led-trigger = "switch0_trigger";
+		};
+	};

@@ -75,7 +75,12 @@ void tk_debug_account_sleep_time(struct timespec64 *t)
 	int bin = min(fls(t->tv_sec), NUM_BINS-1);
 
 	sleep_time_bin[bin]++;
+	#ifndef CONFIG_FIH_RPMH_MASTER_STATS
 	printk_deferred(KERN_INFO "Suspended for %lld.%03lu seconds\n",
 			(s64)t->tv_sec, t->tv_nsec / NSEC_PER_MSEC);
+	#else
+	printk_deferred(KERN_INFO "[PM] APSS PC: %3lld.%03lu seconds\n",
+			(s64)t->tv_sec, t->tv_nsec / NSEC_PER_MSEC);
+	#endif
 }
 

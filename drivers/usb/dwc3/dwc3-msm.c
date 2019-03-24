@@ -218,7 +218,7 @@ struct dwc3_msm {
 	struct workqueue_struct *dwc3_wq;
 	struct delayed_work	sm_work;
 	unsigned long		inputs;
-	unsigned int		max_power;
+	int			max_power;
 	bool			charging_disabled;
 	enum usb_otg_state	otg_state;
 	u32			bus_perf_client;
@@ -2596,6 +2596,9 @@ static int dwc3_msm_resume(struct dwc3_msm *mdwc)
 	}
 
 	dev_info(mdwc->dev, "DWC3 exited from low power mode\n");
+
+	/* Reset to invalid value */
+	mdwc->max_power = -1;
 
 	/* Enable core irq */
 	if (dwc->irq)

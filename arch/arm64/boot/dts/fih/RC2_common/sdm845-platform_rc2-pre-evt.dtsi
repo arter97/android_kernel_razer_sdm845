@@ -1,0 +1,518 @@
+&wcd9xxx_intc{
+	pinctrl-names = "default";
+	pinctrl-0 = <&sdm845_gpio54_default>;
+};
+
+&wcd_rst_gpio{
+	pinctrl-names = "aud_active", "aud_sleep";
+	pinctrl-0 = <&sdm845_gpio64_active>;
+	pinctrl-1 = <&sdm845_gpio64_sleep>;
+};
+
+&pcie0{
+	pinctrl-names = "default";
+	pinctrl-0 = <>;
+	status = "disabled";
+};
+
+&pcie1{
+	pinctrl-names = "default";
+	pinctrl-0 = <>;
+	status = "disabled";
+};
+
+&dsi_sharp_4k_dsc_video_display{
+	pinctrl-names = "panel_active", "panel_suspend";
+	pinctrl-0 = <>;
+	pinctrl-1 = <>;
+};
+
+&dsi_sharp_4k_dsc_cmd_display{
+	pinctrl-names = "panel_active", "panel_suspend";
+	pinctrl-0 = <>;
+	pinctrl-1 = <>;
+};
+
+&dsi_sharp_1080_cmd_display{
+	pinctrl-names = "panel_active", "panel_suspend";
+	pinctrl-0 = <>;
+	pinctrl-1 = <>;
+};
+
+&dsi_dual_sharp_1080_120hz_cmd_display {
+	pinctrl-names = "panel_active", "panel_suspend";
+	pinctrl-0 = <>;
+	pinctrl-1 = <>;
+};
+
+&dsi_dual_nt35597_truly_video_display {
+	pinctrl-names = "panel_active", "panel_suspend";
+	pinctrl-0 = <>;
+	pinctrl-1 = <>;
+};
+
+&dsi_dual_nt35597_truly_cmd_display {
+	pinctrl-names = "panel_active", "panel_suspend";
+	pinctrl-0 = <>;
+	pinctrl-1 = <>;
+};
+
+&dsi_nt35597_truly_dsc_cmd_display {
+	pinctrl-names = "panel_active", "panel_suspend";
+	pinctrl-0 = <>;
+	pinctrl-1 = <>;
+};
+
+&dsi_nt35597_truly_dsc_video_display {
+	pinctrl-names = "panel_active", "panel_suspend";
+	pinctrl-0 = <>;
+	pinctrl-1 = <>;
+};
+
+&dsi_sim_vid_display {
+	pinctrl-names = "panel_active", "panel_suspend";
+	pinctrl-0 = <>;
+	pinctrl-1 = <>;
+};
+
+&dsi_dual_sim_vid_display {
+	pinctrl-names = "panel_active", "panel_suspend";
+	pinctrl-0 = <>;
+	pinctrl-1 = <>;
+};
+
+&dsi_sim_cmd_display {
+	pinctrl-names = "panel_active", "panel_suspend";
+	pinctrl-0 = <>;
+	pinctrl-1 = <>;
+};
+
+&dsi_dual_sim_cmd_display {
+	pinctrl-names = "panel_active", "panel_suspend";
+	pinctrl-0 = <>;
+	pinctrl-1 = <>;
+};
+
+&dsi_sim_dsc_375_cmd_display {
+	pinctrl-names = "panel_active", "panel_suspend";
+	pinctrl-0 = <>;
+	pinctrl-1 = <>;
+};
+
+&dsi_dual_sim_dsc_375_cmd_display {
+	pinctrl-names = "panel_active", "panel_suspend";
+	pinctrl-0 = <>;
+	pinctrl-1 = <>;
+};
+
+&mdss_dsi_nt36830_wqhd_dualdsi_cmd {
+	pinctrl-names = "panel_active", "panel_suspend";
+	pinctrl-0 = <>;
+	pinctrl-1 = <>;
+};
+
+&mdss_dsi_nt36830_wqhd_dualdsi_video {
+	pinctrl-names = "panel_active", "panel_suspend";
+	pinctrl-0 = <>;
+	pinctrl-1 = <>;
+};
+
+&mdss_dsi_nt36830_wqhd_dualdsi_cmd_30hz {
+	pinctrl-names = "panel_active", "panel_suspend";
+	pinctrl-0 = <>;
+	pinctrl-1 = <>;
+};
+
+&mdss_dsi_nt36830_wqhd_dualdsi_video_30hz {
+	pinctrl-names = "panel_active", "panel_suspend";
+	pinctrl-0 = <>;
+	pinctrl-1 = <>;
+};
+
+&mdss_dsi_nt36830_wqhd_dualdsi_cmd_48hz {
+	pinctrl-names = "panel_active", "panel_suspend";
+	pinctrl-0 = <>;
+	pinctrl-1 = <>;
+};
+
+&cam_cci {
+	pinctrl-names = "cam_default", "cam_suspend";
+	pinctrl-0 = <&sdm845_gpio17_active &sdm845_gpio18_active &sdm845_gpio19_active &sdm845_gpio20_active>;
+	pinctrl-1 = <&sdm845_gpio17_sleep &sdm845_gpio18_sleep &sdm845_gpio19_sleep &sdm845_gpio20_sleep>;
+};
+
+&camera_rear_ldo {
+	pinctrl-names = "default";
+	pinctrl-0 = <>;
+};
+
+&camera_ldo {
+	pinctrl-names = "default";
+	pinctrl-0 = <>;
+};
+
+&pm8998_lvs1 {
+	status = "okay";
+	regulator-always-on;
+};
+
+&cti2 {
+	pinctrl-names = "cti-trigout-pctrl";
+	pinctrl-0 = <>;
+};
+
+&flash_led { /* Disable PMIC FlashLed */
+	status = "disabled";
+};
+
+&ufshc_mem {
+	pinctrl-names = "dev-reset-assert", "dev-reset-deassert";
+	pinctrl-0 = <&sdm845_ufs_dev_reset_assert>;
+	pinctrl-1 = <&sdm845_ufs_dev_reset_deassert>;
+};
+
+&tspp {
+	pinctrl-names = "disabled", "tsif0-mode1", "tsif0-mode2", "tsif1-mode1", "tsif1-mode2", "dual-tsif-mode1", "dual-tsif-mode2";
+	pinctrl-0 = <>;
+	pinctrl-1 = <>;
+	pinctrl-2 = <>;
+	pinctrl-3 = <>;
+	pinctrl-4 = <>;
+	pinctrl-5 = <>;
+	pinctrl-6 = <>;
+};
+
+/*
+&extcon_storage_cd {
+	pinctrl-names = "default";
+	pinctrl-0 = <&sdm845_gpio126_default>;
+};
+*/
+
+&sdhc_2 {
+	vdd-supply = <&pm8998_l21>;
+	qcom,vdd-voltage-level = <2950000 2960000>;
+	qcom,vdd-current-level = <200 800000>;
+	pinctrl-names = "active", "sleep";
+	pinctrl-0 = <&sdm845_sdc2_clk_on  &sdm845_sdc2_cmd_on &sdm845_sdc2_data_on &sdm845_gpio126_default &sdm845_gpio112_default &sdm845_gpio108_default>;
+	pinctrl-1 = <&sdm845_sdc2_clk_off &sdm845_sdc2_cmd_off &sdm845_sdc2_data_off &sdm845_gpio126_default &sdm845_gpio112_default &sdm845_gpio108_default>;
+	cd-gpios = <&tlmm 126 0x1>;
+	status = "ok";
+};
+
+&snd_934x {
+	pinctrl-names = "aud_active", "aud_sleep";
+	pinctrl-0 = <>;
+	pinctrl-1 = <>;
+};
+
+&qupv3_se3_i2c {
+	nq@28 {
+		pinctrl-names = "nfc_active", "nfc_suspend";
+		pinctrl-0 = <&sdm845_gpio63_active &sdm845_gpio12_active &sdm845_gpio62_active &sdm845_gpio116_active &pm8998_gpio21_default>;
+		pinctrl-1 = <&sdm845_gpio63_sleep &sdm845_gpio12_sleep &sdm845_gpio62_sleep &sdm845_gpio116_sleep>;
+	};
+};
+
+&pmi8998_switch1 {
+	pinctrl-names = "led_enable", "led_disable";
+	pinctrl-0 = <>;
+	pinctrl-1 = <>;
+};
+
+&extcon_usb1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <>;
+};
+
+&usb1 {
+	extcon = <>;
+};
+
+&ext_5v_boost {
+	pinctrl-names = "default";
+	pinctrl-0 = <>;
+};
+
+&soc {
+	sound-tavil {
+		pinctrl-names = "aud_active", "aud_sleep";
+		pinctrl-0 = <>;
+		pinctrl-1 = <>;
+	};
+
+	gpio_keys {
+		status = "okay";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pm8998_gpio6_default>;
+
+                vol_up {
+                        status = "disabled";
+                };
+
+                cam_snapshot {
+                        status = "disabled";
+                };
+
+                cam_focus {
+                        status = "disabled";
+                };
+
+		vol_down {
+			label = "volume_down";
+			gpios = <&pm8998_gpios 6 GPIO_ACTIVE_LOW>;
+			linux,input-type = <1>;
+			linux,code = <114>;
+			gpio-key,wakeup;
+			debounce-interval = <15>;
+			linux,can-disable;
+		};
+	};
+};
+
+/* UART interface */
+&qupv3_se6_4uart { /* BT_HCI_UART */
+	status = "okay";
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&sdm845_gpio45_active &sdm845_gpio46_active &sdm845_gpio47_active &sdm845_gpio48_active>;
+	pinctrl-1 = <&sdm845_gpio45_sleep &sdm845_gpio46_sleep &sdm845_gpio47_sleep &sdm845_gpio48_sleep>;
+};
+
+&qupv3_se7_4uart {
+	status = "disabled";
+};
+
+&qupv3_se9_2uart { /* DEBUG_UART */
+	status = "okay";
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&sdm845_gpio4_active &sdm845_gpio5_active>;
+	pinctrl-1 = <&sdm845_gpio4_sleep &sdm845_gpio5_sleep>;
+};
+
+&qupv3_se10_2uart {
+	status = "disabled";
+};
+
+/* I2C interface */
+&qupv3_se0_i2c {
+	status = "ok";
+};
+
+&qupv3_se1_i2c {
+	status = "disabled";
+};
+
+&qupv3_se2_i2c {
+	status = "ok";
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&sdm845_gpio27_active &sdm845_gpio28_active>;
+	pinctrl-1 = <&sdm845_gpio27_sleep &sdm845_gpio28_sleep>;
+};
+
+&qupv3_se3_i2c {
+	status = "disabled";
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&sdm845_gpio41_active &sdm845_gpio42_active>;
+	pinctrl-1 = <&sdm845_gpio41_sleep &sdm845_gpio42_sleep>;
+};
+
+&qupv3_se4_i2c {
+	status = "disabled";
+};
+
+&qupv3_se5_i2c {
+	status = "okay";
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&sdm845_gpio85_active &sdm845_gpio86_active>;
+	pinctrl-1 = <&sdm845_gpio85_sleep &sdm845_gpio86_sleep>;
+};
+
+&qupv3_se6_i2c {
+	status = "disabled";
+};
+
+&qupv3_se7_i2c {
+	status = "disabled";
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&sdm845_gpio93_active &sdm845_gpio94_active>;
+	pinctrl-1 = <&sdm845_gpio93_sleep &sdm845_gpio94_sleep>;
+};
+
+&qupv3_se8_i2c {
+	status = "disabled";
+};
+
+&qupv3_se9_i2c {
+	status = "disabled";
+};
+
+&qupv3_se10_i2c {
+	status = "okay";
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&sdm845_gpio55_active &sdm845_gpio56_active>;
+	pinctrl-1 = <&sdm845_gpio55_sleep &sdm845_gpio56_sleep>;
+};
+
+&qupv3_se11_i2c {
+	status = "ok";
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&sdm845_gpio31_active &sdm845_gpio32_active>;
+	pinctrl-1 = <&sdm845_gpio31_sleep &sdm845_gpio32_sleep>;
+};
+
+&qupv3_se12_i2c {
+	status = "disabled";
+};
+
+&qupv3_se13_i2c {
+	status = "disabled";
+};
+
+&qupv3_se14_i2c {
+	status = "disabled";
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&sdm845_gpio33_active &sdm845_gpio34_active>;
+	pinctrl-1 = <&sdm845_gpio33_sleep &sdm845_gpio34_sleep>;
+};
+
+&qupv3_se15_i2c {
+	status = "disabled";
+};
+
+/* SPI interface */
+&qupv3_se0_spi {
+	status = "disabled";
+};
+
+&qupv3_se1_spi {
+	status = "disabled";
+};
+
+&qupv3_se2_spi {
+	status = "disabled";
+};
+
+&qupv3_se3_spi {
+	status = "disabled";
+};
+
+&qupv3_se4_spi {
+	status = "disabled";
+};
+
+&qupv3_se5_spi {
+	status = "disabled";
+};
+
+&qupv3_se6_spi {
+	status = "disabled";
+};
+
+&qupv3_se7_spi {
+	status = "disabled";
+};
+
+&qupv3_se8_spi {
+	status = "disabled";
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&sdm845_gpio65_active &sdm845_gpio66_active &sdm845_gpio67_active &sdm845_gpio68_active>;
+	pinctrl-1 = <&sdm845_gpio65_sleep &sdm845_gpio66_sleep &sdm845_gpio67_sleep &sdm845_gpio68_sleep>;
+};
+
+&qupv3_se9_spi {
+	status = "disabled";
+};
+
+&qupv3_se10_spi {
+	status = "disabled";
+};
+
+&qupv3_se11_spi {
+	status = "disabled";
+};
+
+&qupv3_se12_spi {
+	status = "disabled";
+};
+
+&qupv3_se13_spi {
+	status = "disabled";
+};
+
+&qupv3_se14_spi {
+	status = "disabled";
+};
+
+&qupv3_se15_spi {
+	status = "disabled";
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&sdm845_gpio81_active &sdm845_gpio82_active &sdm845_gpio83_active &sdm845_gpio84_active>;
+	pinctrl-1 = <&sdm845_gpio81_sleep &sdm845_gpio82_sleep &sdm845_gpio83_sleep &sdm845_gpio84_sleep>;
+};
+
+&tlmm {
+       fih,skipped-gpio-list = <81 82 83 84>;
+};
+
+&soc {
+	fih-gpio {
+		compatible = "fih-gpio";
+		label = "fih_default";
+		pinctrl-names = "default", "sleep";
+		pinctrl-0 = <
+				&sdm845_gpio2_sleep
+				&sdm845_gpio3_sleep
+				&sdm845_gpio11_sleep
+				&sdm845_gpio35_sleep
+				&sdm845_gpio36_sleep
+				&sdm845_gpio40_sleep
+				&sdm845_gpio49_sleep
+				&sdm845_gpio52_sleep
+				&sdm845_gpio57_sleep
+				&sdm845_gpio78_sleep
+				&sdm845_gpio79_sleep
+				&sdm845_gpio87_sleep
+				&sdm845_gpio88_sleep
+				&sdm845_gpio89_sleep
+				&sdm845_gpio90_sleep
+				&sdm845_gpio91_sleep
+				&sdm845_gpio92_sleep
+				&sdm845_gpio99_sleep
+				&sdm845_gpio113_sleep
+				&sdm845_gpio114_sleep
+				&sdm845_gpio123_sleep
+				&sdm845_gpio124_sleep
+				&sdm845_gpio125_sleep
+				&sdm845_gpio128_sleep
+				&sdm845_gpio129_sleep
+				&sdm845_gpio133_sleep
+				&sdm845_gpio135_sleep
+				&sdm845_gpio136_sleep
+				&pm8998_gpio1_sleep
+				&pm8998_gpio2_sleep
+				&pm8998_gpio5_sleep
+				&pm8998_gpio14_sleep
+				&pm8998_gpio15_sleep
+				&pm8998_gpio17_sleep
+				&pm8998_gpio19_sleep
+				&pm8998_gpio21_sleep
+				&pmi8998_gpio1_sleep
+				&pmi8998_gpio3_sleep
+				&pmi8998_gpio5_sleep
+				&pmi8998_gpio6_sleep
+				&pmi8998_gpio8_sleep
+				&pmi8998_gpio9_sleep
+				&pmi8998_gpio11_sleep
+				&pmi8998_gpio12_sleep
+				&pmi8998_gpio14_sleep
+				&pm8005_gpio1_sleep
+				&pm8005_gpio2_sleep>;
+		pinctrl-1 = <>;
+	};
+};
+
+&qusb_phy0{
+	pinctrl-names = "atest_usb13_suspend", "atest_usb13_active";
+	pinctrl-0 = <&sdm845_gpio8_sleep>;
+	pinctrl-1 = <&sdm845_gpio8_active>;
+};

@@ -213,6 +213,111 @@ void msm_rpmh_master_stats_update(void)
 }
 EXPORT_SYMBOL(msm_rpmh_master_stats_update);
 
+#ifdef CONFIG_FIH_RPMH_MASTER_STATS
+#define RPMH_INFO_LENGTH	512
+#define NOTIFY_THRES	(30000)
+
+struct fih_rpmh_master_data {
+	char rpmh_buf[RPMH_INFO_LENGTH];
+	bool notify;
+	uint64_t apss_last_exited_ms;
+	uint64_t master_last_entered_ms;
+	uint64_t master_last_exited_ms;
+	uint64_t master_accumulated_duration_ms;
+	uint64_t master_enabled_time_ms;
+};
+
+static struct fih_rpmh_master_data fih_rpmh_data;
+
+static ssize_t fih_rpmh_master_stats_print_data(char *prvbuf, ssize_t length,
+				struct msm_rpmh_master_stats *record,
+				const char *name)
+{	/* QCT raw format */
+	#if 0
+	return snprintf(prvbuf, length, "(%s, 0x%x, 0x%x, 0x%llx, 0x%llx, 0x%llx, (0x%d)), ",
+			name, record->version_id, record->counts,
+			record->last_exited, record->last_entered,
+			record->accumulated_duration,
+			(record->last_entered > record->last_exited) ? 0 : 1);
+	#else
+	/* Our old format with converted time as ms */
+	fih_rpmh_data.master_last_entered_ms = record->last_entered;
+	fih_rpmh_data.master_last_exited_ms = record->last_exited;
+	fih_rpmh_data.master_accumulated_duration_ms = record->accumulated_duration;
+
+	(void)do_div(fih_rpmh_data.master_last_entered_ms, 19200);
+	(void)do_div(fih_rpmh_data.master_last_exited_ms, 19200);
+	(void)do_div(fih_rpmh_data.master_accumulated_duration_ms, 19200);
+
+	fih_rpmh_data.master_enabled_time_ms = 0;
+
+	if (strncmp(name, "APSS", 4) == 0) {
+		fih_rpmh_data.apss_last_exited_ms = fih_rpmh_data.master_last_exited_ms;
+
+	} else if (record->last_exited > record->last_entered) {
+		/* When sub-system enabled, calculate the enabled time. */
+		if (fih_rpmh_data.apss_last_exited_ms > fih_rpmh_data.master_last_exited_ms)
+			fih_rpmh_data.master_enabled_time_ms = fih_rpmh_data.apss_last_exited_ms -
+				fih_rpmh_data.master_last_exited_ms;
+	}
+
+	return snprintf(prvbuf, length, "[PM] sleep_info.%s - %9llu(0x%d), %9llu, %9llu, %8llu mS.\n",
+			name,
+			fih_rpmh_data.master_last_exited_ms,
+			(record->last_exited > record->last_entered) ? 1 : 0,
+			fih_rpmh_data.master_last_entered_ms,
+			fih_rpmh_data.master_accumulated_duration_ms,
+			fih_rpmh_data.master_enabled_time_ms);
+	#endif
+}
+
+void check_msm_rpmh_master_stats(void)
+{
+	ssize_t length;
+	int i = 0;
+	unsigned int size = 0;
+	struct msm_rpmh_master_stats *record = NULL;
+
+
+	mutex_lock(&rpmh_stats_mutex);
+
+	fih_rpmh_data.notify = false;
+
+	/* First Read APSS master stats */
+
+	length = fih_rpmh_master_stats_print_data(fih_rpmh_data.rpmh_buf, RPMH_INFO_LENGTH,
+						&apss_master_stats, "APSS");
+
+	/* Read SMEM data written by other masters */
+
+	for (i = 0; i < ARRAY_SIZE(rpmh_masters); i++) {
+		record = (struct msm_rpmh_master_stats *) smem_get_entry(
+					rpmh_masters[i].smem_id, &size,
+					rpmh_masters[i].pid, 0);
+
+		if (!IS_ERR_OR_NULL(record)) {
+			if (RPMH_INFO_LENGTH - length > 0)
+				length += fih_rpmh_master_stats_print_data(
+						fih_rpmh_data.rpmh_buf + length, RPMH_INFO_LENGTH - length,
+						record,
+						rpmh_masters[i].master_name);
+
+			/* Check if any sub-system still wakeup and over threshold. */
+			if (fih_rpmh_data.master_enabled_time_ms > NOTIFY_THRES) {
+				fih_rpmh_data.notify = true;
+			}
+		}
+	}
+
+	mutex_unlock(&rpmh_stats_mutex);
+
+	/* Output rpmh master info for debugging. */
+	if (fih_rpmh_data.notify)
+		pr_info("%s", fih_rpmh_data.rpmh_buf);
+}
+EXPORT_SYMBOL(check_msm_rpmh_master_stats);
+#endif /* CONFIG_FIH_RPMH_MASTER_STATS */
+
 static int msm_rpmh_master_stats_probe(struct platform_device *pdev)
 {
 	struct rpmh_master_stats_prv_data *prvdata = NULL;

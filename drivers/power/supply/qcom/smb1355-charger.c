@@ -767,6 +767,18 @@ static int smb1355_set_parallel_charging(struct smb1355 *chip, bool disable)
 		return rc;
 	}
 
+	if (chip->irq_disable_votable)
+		vote(chip->irq_disable_votable, PARALLEL_ENABLE_VOTER,
+				disable, 0);
+
+	rc = smb1355_masked_write(chip, BANDGAP_ENABLE_REG,
+				BANDGAP_ENABLE_CMD_BIT,
+				disable ? 0 : BANDGAP_ENABLE_CMD_BIT);
+	if (rc < 0) {
+		pr_err("Couldn't configure bandgap enable rc=%d\n", rc);
+		return rc;
+	}
+
 	chip->disabled = disable;
 
 	return 0;

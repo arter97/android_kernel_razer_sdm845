@@ -1,0 +1,57 @@
+/* Battery Data */
+/delete-node/ &mtp_batterydata;
+&vendor {
+	fih_batterydata: qcom,battery-data {
+		qcom,batt-id-range-pct = <15>;
+		#include "batterydata-RC2-4000mah-240k.dtsi"
+	};
+};
+
+/* Fuel Gauge - PMI8998 */
+&pmi8998_fg {
+	qcom,battery-data = <&fih_batterydata>;
+	qcom,fg-cutoff-voltage = <3300>;
+	qcom,fg-empty-voltage = <3100>;
+	qcom,fg-chg-term-current = <80>; /* 0.02C */
+	qcom,fg-sys-term-current = <(-250)>; /* Actually battery will reach to 100% when charging current ~= -150 mA */
+	qcom,fg-auto-recharge-soc;
+	qcom,fg-recharge-soc-thr = <99>;
+	qcom,hold-soc-while-full;
+	qcom,battery-thermal-coefficients = [C9 50 FF];
+	qcom,fg-jeita-thresholds = <0 15 45 55>;
+};
+
+/* Main Charger - PMI8998 */
+&pmi8998_charger {
+	qcom,battery-data = <&fih_batterydata>;
+	qcom,usb-icl-ua = <3000000>;
+	qcom,dc-icl-ua = <1000000>;
+	qcom,fcc-max-ua = <3900000>;
+	qcom,fv-max-uv = <4400000>;
+	qcom,jeita-fcc-comp = <600000>;
+	qcom,jeita-fv-comp = <300000>;
+	qcom,step-charging-enable;
+	qcom,sw-jeita-enable;
+	qcom,thermal-mitigation = <3900000 1900000 1150000>;
+	qcom,auto-recharge-soc;
+	/delete-property/ qcom,wipower-max-uw;
+	/delete-property/ qcom,suspend-input-on-debug-batt;
+	/delete-property/ qcom,batteryless-platform;
+
+	/* FIH */
+//	fih,info-update-ms = <10000>; /* 10s */
+	fih,input-priority = <1>; /* 0:DCIN has priority/1:USBIN has priority */
+	fih,wlc-fcc-en;
+	fih,charging-check-enable;	
+	fih,forecast-charging-enable;
+};
+
+/* Slave Charger - SMB1355 */
+&qupv3_se10_i2c {
+	status = "okay";
+};
+
+/* QNOVO */
+&pmi8998_qnovo {
+	status = "disabled";
+};

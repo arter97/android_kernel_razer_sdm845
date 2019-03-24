@@ -1,0 +1,10 @@
+&spmi_bus {
+	qcom,pm8998@0 {
+		qcom,power-on@800 {
+			qcom,pon_2 { /* Change to Volume-up key */
+				linux,code = <115>;
+			};
+		};
+	};
+};
+

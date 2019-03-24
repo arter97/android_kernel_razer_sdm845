@@ -164,7 +164,10 @@ Optional properties:
 					"dfps_immediate_porch_mode_vfp" = FPS change request is
 					implemented immediately by changing panel vertical
 					front porch values.
-- qcom,dsi-supported-dfps-list:		List containing all the supported refresh rates.
+- qcom,min-refresh-rate:		Minimum refresh rate supported by the panel.
+- qcom,max-refresh-rate:		Maximum refresh rate supported by the panel. If max refresh
+					rate is not specified, then the frame rate of the panel in
+					qcom,mdss-dsi-panel-framerate is used.
 - qcom,mdss-dsi-bl-pmic-control-type:	A string that specifies the implementation of backlight
 					control for this panel.
 					"bl_ctrl_pwm" = Backlight controlled by PWM gpio.
@@ -194,6 +197,15 @@ Optional properties:
 - qcom,mdss-dsi-te-using-wd:		Boolean entry enables the watchdog timer support to generate the vsync signal
 					for command mode panel. By default, panel TE will be used to generate the vsync.
 - qcom,mdss-dsi-te-using-te-pin:	Boolean to specify whether using hardware vsync.
+- qcom,mdss-dsi-qsync-min-refresh-rate: A u32 entry to specify minimum refresh rate supported by the panel to enable qsync feature.
+- qcom,mdss-dsi-qsync-on-commands:	String that specifies the commands to enable qsync feature.
+- qcom,mdss-dsi-qsync-on-commands-state: String that specifies the ctrl state for sending qsync on commands.
+					"dsi_lp_mode" = DSI low power mode (default)
+					"dsi_hs_mode" = DSI high speed mode
+- qcom,mdss-dsi-qsync-off-commands:	String that specifies the commands to disable qsync feature.
+- qcom,mdss-dsi-qsync-off-commands-state: String that specifies the ctrl state for sending qsync off commands.
+					"dsi_lp_mode" = DSI low power mode (default)
+					"dsi_hs_mode" = DSI high speed mode
 - qcom,mdss-dsi-te-pin-select:		Specifies TE operating mode.
 					0 = TE through embedded dcs command
 					1 = TE through TE gpio pin. (default)
@@ -521,10 +533,6 @@ Optional properties:
 - qcom,mdss-dsi-panel-cmds-only-by-right: Boolean used to mention whether the panel support DSI1 or
 					DSI0 to send commands. If this was set, that mean the panel only support
 					DSI1 to send commands, otherwise DSI0 will send comands.
-- qcom,dsi-dyn-clk-enable:		Boolean to indicate dsi dynamic clock switch feature
-					is supported.
-- qcom,dsi-dyn-clk-list:		An u32 array which lists all the supported dsi bit clock
-					frequencies in Hz for the given panel.
 
 Required properties for sub-nodes:	None
 Optional properties:
@@ -605,6 +613,7 @@ Example:
 		qcom,mdss-dsi-te-check-enable;
 		qcom,mdss-dsi-te-using-wd;
 		qcom,mdss-dsi-te-using-te-pin;
+		qcom,mdss-dsi-qsync-min-refresh-rate = <30>;
 		qcom,mdss-dsi-te-dcs-command = <1>;
 		qcom,mdss-dsi-wr-mem-continue = <0x3c>;
 		qcom,mdss-dsi-wr-mem-start = <0x2c>;
@@ -646,7 +655,8 @@ Example:
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
 		qcom,mdss-dsi-pan-enable-dynamic-fps;
 		qcom,mdss-dsi-pan-fps-update = "dfps_suspend_resume_mode";
-		qcom,dsi-supported-dfps-list = <48 55 60>;
+		qcom,min-refresh-rate = <30>;
+		qcom,max-refresh-rate = <60>;
 		qcom,mdss-dsi-bl-pmic-bank-select = <0>;
 		qcom,mdss-dsi-bl-pmic-pwm-frequency = <0>;
 		qcom,mdss-dsi-pwm-gpio = <&pm8941_mpps 5 0>;
@@ -717,6 +727,10 @@ Example:
 					29 00 00 00 00 00 02 B0 04
 					29 00 00 00 00 00 02 F1 00];
 				qcom,mdss-dsi-timing-switch-command-state = "dsi_lp_mode";
+				qcom,mdss-dsi-qsync-on-commands = [15 01 00 00 00 00 02 51 00];
+				qcom,mdss-dsi-qsync-on-commands-state = "dsi_hs_mode";
+				qcom,mdss-dsi-qsync-off-commands = [15 01 00 00 00 00 02 51 00];
+				qcom,mdss-dsi-qsync-off-commands-state = "dsi_hs_mode";
 
 				qcom,mdss-dsc-slice-height = <16>;
 				qcom,mdss-dsc-slice-width = <360>;
@@ -777,7 +791,5 @@ Example:
 			                <2 2 1>;
 		qcom,default-topology-index = <0>;
 		qcom,mdss-dsi-dma-schedule-line = <5>;
-		qcom,dsi-dyn-clk-enable;
-		qcom,dsi-dyn-clk-list = <798240576 801594528 804948480>;
 	};
 };

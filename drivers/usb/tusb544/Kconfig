@@ -1,0 +1,6 @@
+config USB_TUSB544
+	tristate "TI I2C based redriver Driver for TUSB544"
+	depends on I2C
+	help
+	  This enables the re-driver driver for TUSB544 based devices.
+

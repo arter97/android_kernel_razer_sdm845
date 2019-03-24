@@ -521,6 +521,12 @@ config NX30P6093
 	  usb_psy to disable CC detection on the event of any water/debris
 	  detected at USBIN.
 
+config WIRELESS_CHARGER_P9221
+	bool "IDT P9221 Wireless Charging control Driver"
+	depends on I2C
+	help
+	  IDT P9221 wireless charging control driver
+
 source "drivers/power/supply/qcom/Kconfig"
 
 endif # POWER_SUPPLY

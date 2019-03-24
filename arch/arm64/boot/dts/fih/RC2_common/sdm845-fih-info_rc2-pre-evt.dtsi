@@ -1,0 +1,11 @@
+&soc {
+	fih_info {
+		compatible = "fih_info";
+		status = "ok";
+		fih-info,devmodel = "RC2";
+		fih-info,baseband = "1.0";
+		fih-info,bandinfo = "G_850_900_1800_1900^W_1_2_3_4_5_8^T_34_39^L_1_2_3_4_5_7_8_9_12_13_17_18_19_20_26_28_29_30_32_38_39_40_41_42_43_46_66_71";
+		fih-info,hwmodel  = "RC2";
+		fih-info,simslot  = "2";
+	};
+};

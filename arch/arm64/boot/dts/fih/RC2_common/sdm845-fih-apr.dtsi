@@ -1,0 +1,9 @@
+&soc {
+	fih_apr {
+		compatible = "fih_apr";
+		status = "ok";
+		fih-apr,poweroncause = "0x00000000";
+		fih-apr,poweroffcause = "0x00000000";
+		fih-apr,rebootreason = "0x00000000";
+	};
+};
