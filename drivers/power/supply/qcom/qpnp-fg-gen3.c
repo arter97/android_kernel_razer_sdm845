@@ -173,7 +173,7 @@ static void fg_encode_current(struct fg_sram_param *sp,
 	enum fg_sram_param_id id, int val_ma, u8 *buf);
 static void fg_encode_default(struct fg_sram_param *sp,
 	enum fg_sram_param_id id, int val, u8 *buf);
-static const char *fg_get_cycle_count(struct fg_chip *chip);
+static const char *fg_get_cycle_counts(struct fg_chip *chip);
 
 static struct fg_irq_info fg_irqs[FG_IRQ_MAX];
 
@@ -1412,7 +1412,7 @@ static int fg_load_learned_cap_from_sram(struct fg_chip *chip)
 	BBS_BATTERY_FCC_MAX(div64_s64(chip->cl.nom_cap_uah, 1000));
 	if (div64_s64(chip->cl.learned_cc_uah * 100, chip->cl.nom_cap_uah) < 70) {
 		BBS_BATTERY_AGING();
-		//BBS_BATTERY_FCC(fg_get_cycle_count(chip), div64_s64(chip->cl.learned_cc_uah, 1000));
+		//BBS_BATTERY_FCC(fg_get_cycle_counts(chip), div64_s64(chip->cl.learned_cc_uah, 1000));
 	}
 #endif /* CONFIG_FIH_BATTERY */
 	return 0;
@@ -2766,7 +2766,25 @@ out:
 	mutex_unlock(&chip->cyc_ctr.lock);
 }
 
-static const char *fg_get_cycle_count(struct fg_chip *chip)
+static int fg_get_cycle_count(struct fg_chip *chip)
+{
+	int i, len = 0;
+
+	if (!chip->cyc_ctr.en)
+		return 0;
+
+	mutex_lock(&chip->cyc_ctr.lock);
+	for (i = 0; i < BUCKET_COUNT; i++)
+		len += chip->cyc_ctr.count[i];
+
+	mutex_unlock(&chip->cyc_ctr.lock);
+
+	len = len / BUCKET_COUNT;
+
+	return len;
+}
+
+static const char *fg_get_cycle_counts(struct fg_chip *chip)
 {
 	int i, len = 0;
 	char *buf;
@@ -2789,22 +2807,6 @@ static const char *fg_get_cycle_count(struct fg_chip *chip)
 
 	buf[len] = '\0';
 	return buf;
-}
-
-static int fg_get_cycle_count_avg(struct fg_chip *chip)
-{
-	int i, temp = 0;
-
-	if (!chip->cyc_ctr.en)
-		return 0;
-
-	mutex_lock(&chip->cyc_ctr.lock);
-	for (i = 0; i < BUCKET_COUNT; i++) {
-		temp += chip->cyc_ctr.count[i];
-	}
-	mutex_unlock(&chip->cyc_ctr.lock);
-
-	return temp / BUCKET_COUNT;
 }
 
 #define ESR_SW_FCC_UA				100000	/* 100mA */
@@ -4086,10 +4088,10 @@ static int fg_psy_get_property(struct power_supply *psy,
 		pval->intval = chip->bp.float_volt_uv;
 		break;
 	case POWER_SUPPLY_PROP_CYCLE_COUNT:
-		pval->intval = fg_get_cycle_count_avg(chip);
+		pval->intval = fg_get_cycle_count(chip);
 		break;
 	case POWER_SUPPLY_PROP_CYCLE_COUNTS:
-		pval->strval = fg_get_cycle_count(chip);
+		pval->strval = fg_get_cycle_counts(chip);
 		break;
 	case POWER_SUPPLY_PROP_CHARGE_NOW_RAW:
 		rc = fg_get_charge_raw(chip, &pval->intval);
@@ -5630,6 +5632,7 @@ static int fg_parse_dt(struct fg_chip *chip)
 
 	chip->dt.disable_esr_pull_dn = of_property_read_bool(node,
 					"qcom,fg-disable-esr-pull-dn");
+
 	chip->dt.disable_fg_twm = of_property_read_bool(node,
 					"qcom,fg-disable-in-twm");
 

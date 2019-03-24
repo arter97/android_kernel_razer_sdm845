@@ -820,8 +820,8 @@ static int fastrpc_mmap_create(struct fastrpc_file *fl, int fd,
 
 		map->apps = me;
 		map->fl = NULL;
-		VERIFY(err, !dma_alloc_memory(&region_phys,
-				 &region_vaddr, len, dma_attrs));
+		VERIFY(err, !dma_alloc_memory(&region_phys, &region_vaddr,
+				 len, dma_attrs));
 		if (err)
 			goto bail;
 		map->phys = (uintptr_t)region_phys;
