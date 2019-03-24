@@ -104,6 +104,7 @@ static const struct snd_soc_dapm_route tavil_dsd_audio_map[] = {
 	{"RX INT4 MIX3", "DSD LO2 Switch", "DSD_FILTER_1"},
 };
 
+#if IS_ENABLED(CONFIG_SND_SOC_WCD934X_DSD)
 static bool is_valid_dsd_interpolator(int interp_num)
 {
 	if ((interp_num == INTERP_HPHL) || (interp_num == INTERP_HPHR) ||
@@ -287,6 +288,7 @@ void tavil_dsd_set_interp_rate(struct tavil_dsd_config *dsd_conf, u16 rx_port,
 	}
 }
 EXPORT_SYMBOL(tavil_dsd_set_interp_rate);
+#endif
 
 static int tavil_set_dsd_mode(struct snd_soc_codec *codec, int dsd_num,
 			      u8 *pcm_rate_val)
@@ -623,6 +625,7 @@ static const struct snd_soc_dapm_widget tavil_dsd_widgets[] = {
 			   SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
 };
 
+#if IS_ENABLED(CONFIG_SND_SOC_WCD934X_DSD)
 /**
  * tavil_dsd_post_ssr_init - DSD intialization after subsystem restart
  *
@@ -770,3 +773,4 @@ void tavil_dsd_deinit(struct tavil_dsd_config *dsd_conf)
 	devm_kfree(codec->dev, dsd_conf);
 }
 EXPORT_SYMBOL(tavil_dsd_deinit);
+#endif

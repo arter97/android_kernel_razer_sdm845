@@ -37,7 +37,13 @@
 #include "codecs/msm-cdc-pinctrl.h"
 #include "codecs/wcd934x/wcd934x.h"
 #include "codecs/wcd934x/wcd934x-mbhc.h"
+
+#if IS_ENABLED(CONFIG_SND_SOC_WSA881X)
 #include "codecs/wsa881x.h"
+#endif
+
+//#undef pr_debug
+//#define pr_debug pr_err
 
 #define DRV_NAME "sdm845-asoc-snd"
 
@@ -64,8 +70,10 @@
 #define ADSP_STATE_READY_TIMEOUT_MS 3000
 #define DEV_NAME_STR_LEN            32
 
+#if IS_ENABLED(CONFIG_SND_SOC_WSA881X)
 #define WSA8810_NAME_1 "wsa881x.20170211"
 #define WSA8810_NAME_2 "wsa881x.20170212"
+#endif
 
 #define WCN_CDC_SLIM_RX_CH_MAX 2
 #define WCN_CDC_SLIM_TX_CH_MAX 3
@@ -74,6 +82,9 @@
 
 #define MSM_HIFI_ON 1
 #define MSM_LL_QOS_VALUE 300 /* time in us to ensure LPM doesn't go in C3/C4 */
+
+/* for BBS log */
+#define REGISTER_ADSP_STATE_NOTIFIER_FAIL	do {printk("BBox;%s: Register adsp state notifier failure\n", __func__); printk("BBox::UEC;2::2\n");} while (0)
 
 enum {
 	SLIM_RX_0 = 0,
@@ -140,10 +151,12 @@ enum {
 	EXT_DISP_RX_IDX_MAX,
 };
 
+#if IS_ENABLED(CONFIG_SND_SOC_WSA881X)
 struct msm_wsa881x_dev_info {
 	struct device_node *of_node;
 	u32 index;
 };
+#endif
 
 enum pinctrl_pin_state {
 	STATE_DISABLE = 0, /* All pins are in sleep state */
@@ -497,14 +510,21 @@ static int qos_vote_status;
 
 static bool is_initial_boot;
 static bool codec_reg_done;
+
+#if IS_ENABLED(CONFIG_SND_SOC_WSA881X)
 static struct snd_soc_aux_dev *msm_aux_dev;
 static struct snd_soc_codec_conf *msm_codec_conf;
+#endif
+
 static struct msm_asoc_wcd93xx_codec msm_codec_fn;
 
 static void *def_tavil_mbhc_cal(void);
 static int msm_snd_enable_codec_ext_clk(struct snd_soc_codec *codec,
 					int enable, bool dapm);
+
+#if IS_ENABLED(CONFIG_SND_SOC_WSA881X)
 static int msm_wsa881x_init(struct snd_soc_component *component);
+#endif
 
 /*
  * Need to report LINEIN
@@ -3991,12 +4011,14 @@ static int msm_audrx_init(struct snd_soc_pcm_runtime *rtd)
 	    !list_empty(&rtd->card->aux_comp_list)) {
 		aux_comp = list_first_entry(&rtd->card->aux_comp_list,
 				struct snd_soc_component, list_aux);
+#if IS_ENABLED(CONFIG_SND_SOC_WSA881X)
 		if (!strcmp(aux_comp->name, WSA8810_NAME_1) ||
 		    !strcmp(aux_comp->name, WSA8810_NAME_2)) {
 			tavil_set_spkr_mode(rtd->codec, WCD934X_SPKR_MODE_1);
 			tavil_set_spkr_gain_offset(rtd->codec,
 					WCD934X_RX_GAIN_OFFSET_M1P5_DB);
 		}
+#endif
 	}
 	card = rtd->card->snd_card;
 	entry = snd_info_create_subdir(card->module, "codecs",
@@ -5994,6 +6016,17 @@ static struct snd_soc_dai_link ext_disp_be_dai_link[] = {
 	},
 };
 
+static struct snd_soc_dai_link_component spk_codec[] = {
+	{
+		.name = "tfa98xx.4-0034",
+		.dai_name = "tfa98xx-aif-4-34",
+	},
+	{
+		.name = "tfa98xx.4-0035",
+		.dai_name = "tfa98xx-aif-4-35",
+	},
+};
+
 static struct snd_soc_dai_link msm_mi2s_be_dai_links[] = {
 	{
 		.name = LPASS_BE_PRI_MI2S_RX,
@@ -6110,6 +6143,22 @@ static struct snd_soc_dai_link msm_mi2s_be_dai_links[] = {
 		.be_hw_params_fixup = msm_be_hw_params_fixup,
 		.ops = &msm_mi2s_be_ops,
 		.ignore_suspend = 1,
+	},
+	{
+		.name = "QUAT_MI2S_RX Hostless",
+		.stream_name = "QUAT_MI2S_RX Hostless",
+		.cpu_dai_name = "QUAT_MI2S_RX_HOSTLESS",
+		.platform_name = "msm-pcm-hostless",
+		.dynamic = 1,
+		.dpcm_playback = 1,
+		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
+			    SND_SOC_DPCM_TRIGGER_POST},
+		.no_host_mode = SND_SOC_DAI_LINK_NO_HOST,
+		.ignore_suspend = 1,
+		/* this dainlink has playback support */
+		.ignore_pmdown_time = 1,
+		.codec_dai_name = "snd-soc-dummy-dai",
+		.codec_name = "snd-soc-dummy",
 	},
 };
 
@@ -6528,6 +6577,8 @@ static struct snd_soc_card *populate_snd_card_dailinks(struct device *dev)
 	int len_1, len_2, len_3, len_4;
 	int total_links;
 	const struct of_device_id *match;
+	const char *mi2s_port_name = NULL;
+	int mi2s_port_number = QUAT_MI2S;
 
 	match = of_match_node(sdm845_asoc_machine_of_match, dev->of_node);
 	if (!match) {
@@ -6579,6 +6630,30 @@ static struct snd_soc_card *populate_snd_card_dailinks(struct device *dev)
 		}
 		if (of_property_read_bool(dev->of_node,
 					  "qcom,mi2s-audio-intf")) {
+			if (!(of_property_read_string(dev->of_node, "fih,nxp-tfa98xx", &mi2s_port_name))) {
+				if (!strcmp(mi2s_port_name, "PRIM")) {
+					mi2s_port_number = PRIM_MI2S;
+				} else if (!strcmp(mi2s_port_name, "SEC")) {
+					mi2s_port_number = SEC_MI2S;
+				} else if (!strcmp(mi2s_port_name, "TERT")) {
+					mi2s_port_number = TERT_MI2S;
+				} else if (!strcmp(mi2s_port_name, "QUAT")) {
+					mi2s_port_number = QUAT_MI2S;
+				} else {
+					mi2s_port_number = QUAT_MI2S;
+					pr_info("%s Default set mi2s_port_number to QUAT_MI2S_RX", __func__);
+				}
+				pr_info("%s set nxp-tfa98xx registering to %s", 
+					    __func__, msm_mi2s_be_dai_links[mi2s_port_number*2].name);
+
+				if (ARRAY_SIZE(spk_codec) != 0) {
+					msm_mi2s_be_dai_links[mi2s_port_number*2].codec_name = NULL;
+					msm_mi2s_be_dai_links[mi2s_port_number*2].codec_dai_name = NULL;
+					msm_mi2s_be_dai_links[mi2s_port_number*2].codecs = spk_codec;
+					msm_mi2s_be_dai_links[mi2s_port_number*2].num_codecs = ARRAY_SIZE(spk_codec);
+				}
+			}
+
 			memcpy(msm_tavil_snd_card_dai_links + total_links,
 			       msm_mi2s_be_dai_links,
 			       sizeof(msm_mi2s_be_dai_links));
@@ -6616,6 +6691,7 @@ static struct snd_soc_card *populate_snd_card_dailinks(struct device *dev)
 	return card;
 }
 
+#if IS_ENABLED(CONFIG_SND_SOC_WSA881X)
 static int msm_wsa881x_init(struct snd_soc_component *component)
 {
 	u8 spkleft_ports[WSA881X_MAX_SWR_PORTS] = {100, 101, 102, 106};
@@ -6855,6 +6931,7 @@ err_free_dev_info:
 err:
 	return ret;
 }
+#endif
 
 static void msm_i2s_auxpcm_init(struct platform_device *pdev)
 {
@@ -6968,9 +7045,12 @@ static int msm_asoc_machine_probe(struct platform_device *pdev)
 		ret = -EPROBE_DEFER;
 		goto err;
 	}
+
+#if IS_ENABLED(CONFIG_SND_SOC_WSA881X)
 	ret = msm_init_wsa_dev(pdev, card);
 	if (ret)
 		goto err;
+#endif
 
 	ret = devm_snd_soc_register_card(&pdev->dev, card);
 	if (ret == -EPROBE_DEFER) {
@@ -7072,10 +7152,11 @@ static int msm_asoc_machine_probe(struct platform_device *pdev)
 	is_initial_boot = true;
 	ret = audio_notifier_register("sdm845", AUDIO_NOTIFIER_ADSP_DOMAIN,
 				      &service_nb);
-	if (ret < 0)
+	if (ret < 0) {
 		pr_err("%s: Audio notifier register failed ret = %d\n",
 			__func__, ret);
-
+		REGISTER_ADSP_STATE_NOTIFIER_FAIL;
+	}
 	return 0;
 err:
 	msm_release_pinctrl(pdev);

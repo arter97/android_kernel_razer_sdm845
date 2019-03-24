@@ -82,6 +82,8 @@ static int msm_route_ext_ec_ref;
 static bool is_custom_stereo_on;
 static bool is_ds2_on;
 static bool swap_ch;
+struct kobject *q6adm_obj;
+static bool adm_bypass;
 
 #define WEIGHT_0_DB 0x4000
 /* all the FEs which can support channel mixer */
@@ -963,7 +965,7 @@ static int msm_routing_get_adm_topology(int fedai_id, int session_type,
 	pr_debug("%s: fedai_id %d, session_type %d, be_id %d\n",
 	       __func__, fedai_id, session_type, be_id);
 
-	if (cal_data == NULL)
+	if (cal_data == NULL || adm_bypass)
 		goto done;
 
 	app_type = fe_dai_app_type_cfg[fedai_id][session_type][be_id].app_type;
@@ -7730,6 +7732,9 @@ static const struct snd_kcontrol_new mmul8_mixer_controls[] = {
 	SOC_SINGLE_EXT("SLIM_7_TX", MSM_BACKEND_DAI_SLIMBUS_7_TX,
 	MSM_FRONTEND_DAI_MULTIMEDIA8, 1, 0, msm_routing_get_audio_mixer,
 	msm_routing_put_audio_mixer),
+	SOC_SINGLE_EXT("SLIM_8_TX", MSM_BACKEND_DAI_SLIMBUS_8_TX,
+	MSM_FRONTEND_DAI_MULTIMEDIA8, 1, 0, msm_routing_get_audio_mixer,
+	msm_routing_put_audio_mixer),
 	SOC_SINGLE_EXT("USB_AUDIO_TX", MSM_BACKEND_DAI_USB_TX,
 	MSM_FRONTEND_DAI_MULTIMEDIA8, 1, 0, msm_routing_get_audio_mixer,
 	msm_routing_put_audio_mixer),
@@ -7824,6 +7829,9 @@ static const struct snd_kcontrol_new mmul16_mixer_controls[] = {
 	MSM_FRONTEND_DAI_MULTIMEDIA16, 1, 0, msm_routing_get_audio_mixer,
 	msm_routing_put_audio_mixer),
 	SOC_SINGLE_EXT("SLIM_7_TX", MSM_BACKEND_DAI_SLIMBUS_7_TX,
+	MSM_FRONTEND_DAI_MULTIMEDIA16, 1, 0, msm_routing_get_audio_mixer,
+	msm_routing_put_audio_mixer),
+	SOC_SINGLE_EXT("SLIM_8_TX", MSM_BACKEND_DAI_SLIMBUS_8_TX,
 	MSM_FRONTEND_DAI_MULTIMEDIA16, 1, 0, msm_routing_get_audio_mixer,
 	msm_routing_put_audio_mixer),
 	SOC_SINGLE_EXT("USB_AUDIO_TX", MSM_BACKEND_DAI_USB_TX,
@@ -9208,6 +9216,9 @@ static const struct snd_kcontrol_new sbus_0_rx_port_mixer_controls[] = {
 	SOC_SINGLE_EXT("QUIN_MI2S_RX", MSM_BACKEND_DAI_SLIMBUS_0_RX,
 	MSM_BACKEND_DAI_QUINARY_MI2S_RX, 1, 0, msm_routing_get_port_mixer,
 	msm_routing_put_port_mixer),
+	SOC_SINGLE_EXT("USB_AUDIO_TX", MSM_BACKEND_DAI_SLIMBUS_0_RX,
+	MSM_BACKEND_DAI_USB_TX, 1, 0, msm_routing_get_port_mixer,
+	msm_routing_put_port_mixer),
 };
 
 static const struct snd_kcontrol_new aux_pcm_rx_port_mixer_controls[] = {
@@ -9442,6 +9453,9 @@ static const struct snd_kcontrol_new primary_mi2s_rx_port_mixer_controls[] = {
 static const struct snd_kcontrol_new usb_rx_port_mixer_controls[] = {
 	SOC_SINGLE_EXT("USB_AUDIO_TX", MSM_BACKEND_DAI_USB_RX,
 	MSM_BACKEND_DAI_USB_TX, 1, 0, msm_routing_get_port_mixer,
+	msm_routing_put_port_mixer),
+	SOC_SINGLE_EXT("SLIM_0_TX", MSM_BACKEND_DAI_USB_RX,
+	MSM_BACKEND_DAI_SLIMBUS_0_TX, 1, 0, msm_routing_get_port_mixer,
 	msm_routing_put_port_mixer),
 };
 
@@ -14060,6 +14074,7 @@ static const struct snd_soc_dapm_route intercon[] = {
 	{"MultiMedia28 Mixer", "SLIM_0_TX", "SLIMBUS_0_TX"},
 	{"MultiMedia29 Mixer", "SLIM_0_TX", "SLIMBUS_0_TX"},
 	{"MultiMedia8 Mixer", "SLIM_0_TX", "SLIMBUS_0_TX"},
+	{"MultiMedia8 Mixer", "SLIM_8_TX", "SLIMBUS_8_TX"},
 	{"MultiMedia2 Mixer", "PRI_MI2S_TX", "PRI_MI2S_TX"},
 	{"MultiMedia4 Mixer", "PRI_MI2S_TX", "PRI_MI2S_TX"},
 	{"MultiMedia17 Mixer", "PRI_MI2S_TX", "PRI_MI2S_TX"},
@@ -14086,6 +14101,8 @@ static const struct snd_soc_dapm_route intercon[] = {
 	{"MultiMedia5 Mixer", "SLIM_7_TX", "SLIMBUS_7_TX"},
 	{"MultiMedia5 Mixer", "SLIM_8_TX", "SLIMBUS_8_TX"},
 	{"MultiMedia10 Mixer", "SLIM_7_TX", "SLIMBUS_7_TX"},
+	{"MultiMedia16 Mixer", "SLIM_7_TX", "SLIMBUS_7_TX"},
+	{"MultiMedia16 Mixer", "SLIM_8_TX", "SLIMBUS_8_TX"},
 	{"MI2S_RX Audio Mixer", "MultiMedia1", "MM_DL1"},
 	{"MI2S_RX Audio Mixer", "MultiMedia2", "MM_DL2"},
 	{"MI2S_RX Audio Mixer", "MultiMedia3", "MM_DL3"},
@@ -16230,6 +16247,7 @@ static const struct snd_soc_dapm_route intercon[] = {
 	{"INT4_MI2S_RX Port Mixer", "INTERNAL_BT_SCO_TX", "INT_BT_SCO_TX"},
 	{"INT4_MI2S_RX", NULL, "INT4_MI2S_RX Port Mixer"},
 
+	{"SLIMBUS_0_RX Port Mixer", "USB_AUDIO_TX", "USB_AUDIO_TX"},
 	{"SLIMBUS_0_RX Port Mixer", "INTERNAL_FM_TX", "INT_FM_TX"},
 	{"SLIMBUS_0_RX Port Mixer", "SLIM_0_TX", "SLIMBUS_0_TX"},
 	{"SLIMBUS_0_RX Port Mixer", "SLIM_1_TX", "SLIMBUS_1_TX"},
@@ -16245,12 +16263,14 @@ static const struct snd_soc_dapm_route intercon[] = {
 	{"SLIMBUS_0_RX Port Mixer", "SEC_MI2S_TX", "SEC_MI2S_TX"},
 	{"SLIMBUS_0_RX Port Mixer", "TERT_MI2S_TX", "TERT_MI2S_TX"},
 	{"SLIMBUS_0_RX Port Mixer", "QUAT_MI2S_TX", "QUAT_MI2S_TX"},
+	{"SLIMBUS_0_RX Port Mixer", "QUAT_MI2S_RX", "QUAT_MI2S_RX"},
 	{"SLIMBUS_0_RX Port Mixer", "QUIN_MI2S_TX", "QUIN_MI2S_TX"},
 	{"SLIMBUS_0_RX Port Mixer", "INTERNAL_BT_SCO_TX", "INT_BT_SCO_TX"},
 	{"SLIMBUS_0_RX", NULL, "SLIMBUS_0_RX Port Mixer"},
 	{"AFE_PCM_RX Port Mixer", "INTERNAL_FM_TX", "INT_FM_TX"},
 	{"AFE_PCM_RX Port Mixer", "SLIM_1_TX", "SLIMBUS_1_TX"},
 	{"PCM_RX", NULL, "AFE_PCM_RX Port Mixer"},
+	{"USB_AUDIO_RX Port Mixer", "SLIM_0_TX", "SLIMBUS_0_TX"},
 	{"USB_AUDIO_RX Port Mixer", "USB_AUDIO_TX", "USB_AUDIO_TX"},
 	{"USB_AUDIO_RX", NULL, "USB_AUDIO_RX Port Mixer"},
 	{"USB_DL_HL", "Switch", "USBAUDIO_DL_HL"},
@@ -17379,6 +17399,32 @@ static void msm_routing_delete_cal_data(void)
 	cal_utils_destroy_cal_types(MAX_ROUTING_CAL_TYPES, &cal_data[0]);
 }
 
+static ssize_t adm_bypass_store(struct kobject *kobj,
+        struct kobj_attribute *attr,
+        const char *buf,
+        size_t count)
+{
+	int enable;
+	sscanf (buf, "%d\n", &enable);
+	if (enable)
+		adm_bypass = true;
+	else
+		adm_bypass = false;
+	return count;
+}
+
+static struct kobj_attribute q6adm_attribute =
+        __ATTR(adm_bypass, 0664, NULL, adm_bypass_store);
+
+static struct attribute *q6adm_attrs[] = {
+	&q6adm_attribute.attr,
+	NULL,
+};
+
+static const struct attribute_group q6adm_group = {
+	.attrs = q6adm_attrs,
+};
+
 static int msm_routing_init_cal_data(void)
 {
 	int ret = 0;
@@ -17412,6 +17458,12 @@ err:
 
 static int __init msm_soc_routing_platform_init(void)
 {
+	int ret;
+	const char *sys_path;
+
+	q6adm_obj = NULL;
+	adm_bypass = false;
+
 	mutex_init(&routing_lock);
 	if (msm_routing_init_cal_data())
 		pr_err("%s: could not init cal data!\n", __func__);
@@ -17422,6 +17474,22 @@ static int __init msm_soc_routing_platform_init(void)
 	memset(&be_dai_name_table, 0, sizeof(be_dai_name_table));
 	memset(&last_be_id_configured, 0, sizeof(last_be_id_configured));
 
+	q6adm_obj = kobject_create_and_add("q6adm", kernel_kobj);
+	if (!q6adm_obj) {
+		pr_err("%s: sysfs create and add failed\n", __func__);
+	} else {
+		sys_path = kobject_get_path(q6adm_obj, GFP_KERNEL);
+		pr_info("%s: q6adm_obj path: %s\n", __func__, sys_path ? sys_path : "N/A");
+		ret = sysfs_create_group(q6adm_obj, &q6adm_group);
+		if (ret) {
+			if (q6adm_obj) {
+				kobject_del(q6adm_obj);
+				q6adm_obj = NULL;
+			}
+			pr_err("%s: sysfs create group failed %d\n", __func__, ret);
+		}
+	}
+
 	return platform_driver_register(&msm_routing_pcm_driver);
 }
 module_init(msm_soc_routing_platform_init);
@@ -17429,6 +17497,13 @@ module_init(msm_soc_routing_platform_init);
 static void __exit msm_soc_routing_platform_exit(void)
 {
 	msm_routing_delete_cal_data();
+
+	if (q6adm_obj) {
+		sysfs_remove_group(q6adm_obj, &q6adm_group);
+		kobject_del(q6adm_obj);
+		q6adm_obj = NULL;
+	}
+
 	memset(&be_dai_name_table, 0, sizeof(be_dai_name_table));
 	mutex_destroy(&routing_lock);
 	platform_driver_unregister(&msm_routing_pcm_driver);

@@ -122,6 +122,8 @@ struct afe_ctl {
 	int set_custom_topology;
 	int dev_acdb_id[AFE_MAX_PORTS];
 	routing_cb rt_cb;
+	struct kobject *q6afe_obj;
+	bool afe_bypass;
 };
 
 static atomic_t afe_ports_mad_type[SLIMBUS_PORT_LAST - SLIMBUS_0_RX];
@@ -3279,10 +3281,12 @@ static int __afe_port_start(u16 port_id, union afe_port_config *afe_config,
 	port_index = afe_get_port_index(port_id);
 	if (!(this_afe.afe_cal_mode[port_index] == AFE_CAL_MODE_NONE)) {
 		/* One time call: only for first time */
-		afe_send_custom_topology();
-		afe_send_port_topology_id(port_id);
-		afe_send_cal(port_id);
-		afe_send_hw_delay(port_id, rate);
+		if (!this_afe.afe_bypass) {
+			afe_send_custom_topology();
+			afe_send_port_topology_id(port_id);
+			afe_send_cal(port_id);
+			afe_send_hw_delay(port_id, rate);
+		}
 	}
 
 	/* Start SW MAD module */
@@ -7495,13 +7499,42 @@ done:
 	return result;
 }
 
+static ssize_t afe_bypass_store(struct kobject *kobj,
+        struct kobj_attribute *attr,
+        const char *buf,
+        size_t count)
+{
+	int enable;
+	sscanf (buf, "%d\n", &enable);
+	if (enable)
+		this_afe.afe_bypass = true;
+	else
+		this_afe.afe_bypass = false;
+	return count;
+}
+
+static struct kobj_attribute q6afe_attribute =
+        __ATTR(afe_bypass, 0664, NULL, afe_bypass_store);
+
+static struct attribute *q6afe_attrs[] = {
+	&q6afe_attribute.attr,
+	NULL,
+};
+
+static const struct attribute_group q6afe_group = {
+	.attrs = q6afe_attrs,
+};
+
 static int __init afe_init(void)
 {
 	int i = 0, ret;
+	const char *sys_path;
 
 	atomic_set(&this_afe.state, 0);
 	atomic_set(&this_afe.status, 0);
 	atomic_set(&this_afe.mem_map_cal_index, -1);
+	this_afe.q6afe_obj = NULL;
+	this_afe.afe_bypass = false;
 	this_afe.apr = NULL;
 	this_afe.dtmf_gen_rx_portid = -1;
 	this_afe.mmap_handle = 0;
@@ -7522,6 +7555,22 @@ static int __init afe_init(void)
 	if (ret)
 		pr_err("%s: could not init cal data! %d\n", __func__, ret);
 
+	this_afe.q6afe_obj = kobject_create_and_add("q6afe", kernel_kobj);
+	if (!this_afe.q6afe_obj) {
+		pr_err("%s: sysfs create and add failed\n", __func__);
+	} else {
+		sys_path = kobject_get_path(this_afe.q6afe_obj, GFP_KERNEL);
+		pr_info("%s: q6afe_obj path: %s\n", __func__, sys_path ? sys_path : "N/A");
+		ret = sysfs_create_group(this_afe.q6afe_obj, &q6afe_group);
+		if (ret) {
+			if (this_afe.q6afe_obj) {
+				kobject_del(this_afe.q6afe_obj);
+				this_afe.q6afe_obj = NULL;
+			}
+			pr_err("%s: sysfs create group failed %d\n", __func__, ret);
+		}
+	}
+
 	config_debug_fs_init();
 	return 0;
 }
@@ -7530,6 +7579,11 @@ static void __exit afe_exit(void)
 {
 	afe_delete_cal_data();
 
+	if (this_afe.q6afe_obj) {
+		sysfs_remove_group(this_afe.q6afe_obj, &q6afe_group);
+		kobject_del(this_afe.q6afe_obj);
+		this_afe.q6afe_obj = NULL;
+	}
 	config_debug_fs_exit();
 	mutex_destroy(&this_afe.afe_cmd_lock);
 	wakeup_source_trash(&wl.ws);
