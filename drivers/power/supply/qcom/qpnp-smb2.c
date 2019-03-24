@@ -1,4 +1,4 @@
-/* Copyright (c) 2016-2018 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2016-2019 The Linux Foundation. All rights reserved.
  * Copyright (c) 2018 Razer Inc.
  * Copyright (c) 2018 Paranoid Android.
  *
