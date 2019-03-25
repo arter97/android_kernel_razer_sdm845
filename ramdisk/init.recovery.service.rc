@@ -1,5 +1,18 @@
+on fs
+    start setup_fstab
+
 on boot
+    wait /dev/fstab_ready
+    start recovery
 
 # For starting recovery on 5.0 and newer
 service recovery /sbin/recovery
+    disabled
     seclabel u:r:recovery:s0
+
+service setup_fstab /sbin/sh /setup_fstab.sh
+    user root
+    group root
+    oneshot
+    disabled
+    seclabel u:r:shell:s0
