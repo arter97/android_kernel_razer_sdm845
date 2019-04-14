@@ -1,10 +1,14 @@
 #!/sbin/sh
 
-echo "Executing /sbin/__mkfs.f2fs -f -O quota $@"
-/sbin/__mkfs.f2fs -f -O quota "$@"
+DEV=$(echo "$@" | tr ' ' '\n' | grep '/dev')
+OPTIONS="-f -O quota -w 4096 -R 0:0"
+
+echo "Executing /sbin/__mkfs.f2fs $OPTIONS $DEV"
+/sbin/__mkfs.f2fs $OPTIONS $DEV
 
 echo "Optimizing f2fs"
-mount "$@" /mnt
+mkdir -p /mnt
+mount $DEV /mnt
 
 find /sys/fs/f2fs -name extension_list | while read list; do
   echo "Updating extensions list for $list"
