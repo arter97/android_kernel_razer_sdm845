@@ -401,7 +401,7 @@ static int synaptics_rmi4_i2c_read(struct synaptics_rmi4_data *rmi4_data,
     unsigned short remaining_length = length;
     struct i2c_client *i2c = to_i2c_client(rmi4_data->pdev->dev.parent);
     struct i2c_adapter *adap = i2c->adapter;
-    struct i2c_msg msg[rd_msgs + 1];
+    struct i2c_msg msg[64 + 1];
 
     mutex_lock(&rmi4_data->rmi4_io_ctrl_mutex);
 
