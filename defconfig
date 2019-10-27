@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/arm64 4.9.186 Kernel Configuration
+# Linux/arm64 4.9.197 Kernel Configuration
 #
 CONFIG_ARM64=y
 CONFIG_64BIT=y
@@ -126,6 +126,7 @@ CONFIG_RCU_NOCB_CPU_ALL=y
 CONFIG_BUILD_BIN2C=y
 CONFIG_IKCONFIG=y
 CONFIG_IKCONFIG_PROC=y
+# CONFIG_IKHEADERS is not set
 CONFIG_LOG_BUF_SHIFT=17
 # CONFIG_CONSOLE_FLUSH_ON_HOTPLUG is not set
 CONFIG_LOG_CPU_MAX_BUF_SHIFT=17
@@ -2846,6 +2847,7 @@ CONFIG_MSM_SDE_ROTATOR=y
 #
 # Qualcomm Technologies, Inc. MSM Camera And Video
 #
+# CONFIG_VIDEO_ALTEK_ISP is not set
 
 #
 # Supported MMC/SDIO adapters
@@ -3361,6 +3363,7 @@ CONFIG_USB_XHCI_PLATFORM=y
 # CONFIG_USB_SL811_HCD is not set
 # CONFIG_USB_R8A66597_HCD is not set
 # CONFIG_USB_HCD_TEST_MODE is not set
+# CONFIG_USB_UPD720X is not set
 
 #
 # USB Device Class drivers
@@ -3439,7 +3442,6 @@ CONFIG_QPNP_USB_PDPHY=y
 # CONFIG_USB_EMI26 is not set
 # CONFIG_USB_ADUTUX is not set
 # CONFIG_USB_SEVSEG is not set
-# CONFIG_USB_RIO500 is not set
 # CONFIG_USB_LEGOTOWER is not set
 # CONFIG_USB_LCD is not set
 # CONFIG_USB_CYPRESS_CY7C63 is not set
