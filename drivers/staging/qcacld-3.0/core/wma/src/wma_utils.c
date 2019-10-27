@@ -3296,14 +3296,6 @@ int wma_stats_event_handler(void *handle, uint8_t *cmd_param_info,
 			buf_len += event->num_peer_stats * sizeof(*peer_stats);
 		}
 
-		if (buf_len > param_buf->num_data) {
-			WMA_LOGE("%s: num_data: %d Invalid num_pdev_stats:%d or num_vdev_stats:%d or num_peer_stats:%d",
-				__func__, param_buf->num_data,
-				event->num_pdev_stats,
-				event->num_vdev_stats, event->num_peer_stats);
-			return -EINVAL;
-		}
-
 		rssi_event =
 			(wmi_per_chain_rssi_stats *) param_buf->chain_stats;
 		if (rssi_event) {
@@ -3324,6 +3316,7 @@ int wma_stats_event_handler(void *handle, uint8_t *cmd_param_info,
 		WMA_LOGE("excess wmi buffer: stats pdev %d vdev %d peer %d",
 			 event->num_pdev_stats, event->num_vdev_stats,
 			 event->num_peer_stats);
+		QDF_ASSERT(0);
 		return -EINVAL;
 	}
 
@@ -6414,6 +6407,9 @@ void wma_set_sta_wow_bitmask(uint32_t *bitmask, uint32_t wow_bitmap_size)
 	wma_set_wow_event_bitmap(WOW_TDLS_CONN_TRACKER_EVENT,
 			     WMI_WOW_MAX_EVENT_BM_LEN,
 			     bitmask);
+	wma_set_wow_event_bitmap(WOW_ROAM_PMKID_REQUEST_EVENT,
+				 WMI_WOW_MAX_EVENT_BM_LEN,
+				 bitmask);
 	/* Add further STA wakeup events above this line. */
 }
 
